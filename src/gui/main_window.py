@@ -32,7 +32,7 @@ TC_FONT  = "Consolas"
 TC_SIZE  = 80          # pt – digit labels
 DARK_BG  = "#191919"
 
-APP_VERSION = "2024.1.0"  # TODO: revert to "dev" after testing updater
+APP_VERSION = "dev"
 KOFI_URL    = "https://ko-fi.com/G2G5IPEXX"
 GITHUB_REPO = "libbierose/Techibbie.TimecodeGenerator"
 
@@ -288,21 +288,25 @@ def _apply_update(new_exe_path: str) -> None:
         current_exe = str(downloads / pathlib.Path(new_exe_path).name)
 
     if sys.platform == "win32":
-        # Windows cannot replace a running executable — delegate to a batch script.
+        # Windows cannot replace a running executable — delegate to a PowerShell script.
         # Unblock-File removes the Zone.Identifier ADS that Windows applies to
         # downloaded files, which otherwise prevents PyInstaller from loading DLLs.
-        bat_fd, bat_path = tempfile.mkstemp(suffix=".bat", prefix="TcgSwap_")
-        with os.fdopen(bat_fd, "w") as bat:
-            bat.write(
-                "@echo off\n"
-                "timeout /t 2 /nobreak > NUL\n"
-                f'move /y "{new_exe_path}" "{current_exe}"\n'
-                f'powershell -Command "Unblock-File -Path \\"{current_exe}\\""\n'
-                f'start "" "{current_exe}"\n'
-                'del "%~f0"\n'
+        ps_fd, ps_path = tempfile.mkstemp(suffix=".ps1", prefix="TcgSwap_")
+        with os.fdopen(ps_fd, "w") as ps:
+            ps.write(
+                "Start-Sleep -Seconds 2\n"
+                f'Move-Item -Force -LiteralPath "{new_exe_path}" -Destination "{current_exe}"\n'
+                f'Unblock-File -LiteralPath "{current_exe}"\n'
+                f'Start-Process -FilePath "{current_exe}"\n'
+                "Remove-Item -LiteralPath $PSCommandPath -Force\n"
             )
         subprocess.Popen(  # noqa: S603
-            ["cmd", "/c", bat_path],
+            [
+                "powershell.exe",
+                "-NonInteractive", "-NoProfile",
+                "-ExecutionPolicy", "Bypass",
+                "-File", ps_path,
+            ],
             creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
             close_fds=True,
         )
