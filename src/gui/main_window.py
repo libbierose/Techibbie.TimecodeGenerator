@@ -317,7 +317,21 @@ def _apply_update(new_exe_path: str) -> None:
                 "    [System.IO.File]::WriteAllBytes($dest, $bytes)\n"
                 "    Remove-Item -LiteralPath $src -Force -ErrorAction SilentlyContinue\n"
                 "    \"[$(Get-Date -f 'HH:mm:ss')] Written $dest\" | Add-Content $log\n"
-                "    Start-Process -FilePath $dest\n"
+                # Wait until Defender/AV releases its scan lock on the new exe before launching.
+                # Without this, PyInstaller's DLL extraction can fail with 'module not found'.
+                "    $deadline = (Get-Date).AddSeconds(30)\n"
+                "    while ((Get-Date) -lt $deadline) {\n"
+                "        try {\n"
+                "            $fs = [System.IO.File]::Open($dest, 'Open', 'Read', 'None')\n"
+                "            $fs.Close(); $fs.Dispose()\n"
+                "            break\n"
+                "        } catch { Start-Sleep -Milliseconds 300 }\n"
+                "    }\n"
+                "    \"[$(Get-Date -f 'HH:mm:ss')] File unlocked, launching\" | Add-Content $log\n"
+                # Use Shell.Application.Open so the process starts in the full user desktop
+                # context (same as a double-click), rather than inheriting the hidden PS context.
+                "    $shell = New-Object -ComObject 'Shell.Application'\n"
+                "    $shell.Open($dest)\n"
                 "    \"[$(Get-Date -f 'HH:mm:ss')] Launched\" | Add-Content $log\n"
                 "} catch {\n"
                 "    \"[$(Get-Date -f 'HH:mm:ss')] ERROR: $_\" | Add-Content $log\n"
