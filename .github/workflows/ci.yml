@@ -30,6 +30,12 @@ jobs:
               python-version: "3.12"
               cache: pip
 
+         # Force UTF-8 stdout on Windows so print() never fails on non-ASCII
+         # characters regardless of the runner's active code page.
+         - name: Set UTF-8 output (Windows only)
+           if: runner.os == 'Windows'
+           run: echo "PYTHONUTF8=1" >> $env:GITHUB_ENV
+
          - name: Install PortAudio (Linux only)
            if: runner.os == 'Linux'
            run: sudo apt-get update && sudo apt-get install -y libportaudio2 portaudio19-dev

@@ -52,8 +52,8 @@ def test_timecodes():
         match = decoded_tc == expected_tc
         if not match:
             all_pass = False
-        status = "✓" if match else "✗ MISMATCH"
-        print(f"  {expected_tc}  →  {decoded_tc}  {status}")
+        status = "PASS" if match else "FAIL"
+        print(f"  {expected_tc}  ->  {decoded_tc}  {status}")
 
         if not match:
             print(f"    Expected: H={hours} M={minutes} S={seconds} F={frames}")
@@ -73,7 +73,7 @@ def test_timecodes():
     print("Sync Word Check:")
     print(f"  Generated: {sync_word}")
     print(f"  Expected:  {expected_sync}")
-    print(f"  {'✓ OK' if sync_ok else '✗ MISMATCH'}")
+    print(f"  {'OK' if sync_ok else 'MISMATCH'}")
     print()
 
     # Audio waveform sanity check
@@ -84,7 +84,7 @@ def test_timecodes():
 
     print()
     print("=" * 80)
-    print("Result:", "ALL PASS ✓" if all_pass else "FAILURES DETECTED ✗")
+    print("Result:", "ALL PASS" if all_pass else "FAILURES DETECTED")
 
 
 if __name__ == "__main__":

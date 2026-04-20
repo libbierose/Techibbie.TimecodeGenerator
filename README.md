@@ -160,10 +160,10 @@ dev  ─────────────────────────
      release ──────────────────────────►  always stable + built
 ```
 
-| Branch    | Purpose                    | CI                                                               |
-| --------- | -------------------------- | ---------------------------------------------------------------- |
-| `dev`     | Day-to-day development     | Syntax check + LTC smoke test on every push                      |
-| `release` | Stable, ready-to-ship code | Full 3-platform build + pre-release binaries on every push/merge |
+| Branch    | Purpose                    | CI                                                                        |
+| --------- | -------------------------- | ------------------------------------------------------------------------- |
+| `dev`     | Day-to-day development     | Syntax check + LTC smoke test on every push                               |
+| `release` | Stable, ready-to-ship code | Full 3-platform build + auto-versioned GitHub Release on every push/merge |
 
 ### First-time setup
 
@@ -186,17 +186,22 @@ git push                    # triggers CI checks
 # Ship to release
 git checkout release
 git merge dev
-git push                    # triggers 3-platform build + updates pre-release binaries
+git push                    # triggers 3-platform build + publishes a new versioned release
 ```
 
-### Versioned releases
+### Versioning
 
-Tag any commit on `release` to publish a permanent versioned release:
+Versions are assigned automatically using [CalVer](https://calver.org/) format **`YYYY.MM.N`**:
 
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
+| Part   | Meaning                                     | Example         |
+| ------ | ------------------------------------------- | --------------- |
+| `YYYY` | Four-digit year                             | `2026`          |
+| `MM`   | Zero-padded month                           | `04`            |
+| `N`    | Release counter for that month, starts at 1 | `1`, `2`, `3` … |
+
+Examples: `2026.04.1` (first April 2026 release), `2026.04.2` (second), `2026.05.1` (first May 2026 release).
+
+The version is computed automatically on every push to `release` — no manual tagging needed.
 
 ---
 
