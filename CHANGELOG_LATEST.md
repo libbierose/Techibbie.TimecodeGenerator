@@ -1,5 +1,5 @@
 ﻿## What''s Changed
 
-## Update
+## Notes
 
-- Change updater to download the latest version instead of redirecting to github releases
+No changes just checking updater works
