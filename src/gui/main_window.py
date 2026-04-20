@@ -299,14 +299,28 @@ def _apply_update(new_exe_path: str) -> None:
         ps_fd, ps_path = tempfile.mkstemp(suffix=".ps1", prefix="TcgSwap_")
         with os.fdopen(ps_fd, "w") as ps:
             ps.write(
+                "$log = [System.IO.Path]::Combine($env:TEMP, 'TcgUpdate.log')\n"
+                f"$src  = '{new_exe_path}'\n"
+                f"$dest = '{current_exe}'\n"
                 f"$parentPid = {current_pid}\n"
+                "\"[$(Get-Date -f 'HH:mm:ss')] Waiting for parent ($parentPid) to exit\" | Out-File $log\n"
                 "while (Get-Process -Id $parentPid -ErrorAction SilentlyContinue) {\n"
                 "    Start-Sleep -Milliseconds 200\n"
                 "}\n"
-                f'Move-Item -Force -LiteralPath "{new_exe_path}" -Destination "{current_exe}"\n'
-                f'try {{ Unblock-File -LiteralPath "{current_exe}" }} catch {{}}\n'
-                f'Start-Process -FilePath "{current_exe}"\n'
-                "Remove-Item -LiteralPath $PSCommandPath -Force\n"
+                "\"[$(Get-Date -f 'HH:mm:ss')] Parent exited\" | Add-Content $log\n"
+                "try {\n"
+                # Write raw bytes to a new file — a freshly-written file has no Zone.Identifier
+                # ADS at all, so no unblocking is needed and the DLL-load error cannot occur.
+                "    $bytes = [System.IO.File]::ReadAllBytes($src)\n"
+                "    [System.IO.File]::WriteAllBytes($dest, $bytes)\n"
+                "    Remove-Item -LiteralPath $src -Force -ErrorAction SilentlyContinue\n"
+                "    \"[$(Get-Date -f 'HH:mm:ss')] Written $dest\" | Add-Content $log\n"
+                "    Start-Process -FilePath $dest\n"
+                "    \"[$(Get-Date -f 'HH:mm:ss')] Launched\" | Add-Content $log\n"
+                "} catch {\n"
+                "    \"[$(Get-Date -f 'HH:mm:ss')] ERROR: $_\" | Add-Content $log\n"
+                "}\n"
+                "Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue\n"
             )
 
         # Use ShellExecuteW to launch the script — this is the most reliable way
