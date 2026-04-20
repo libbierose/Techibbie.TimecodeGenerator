@@ -94,7 +94,11 @@ jobs:
            shell: bash
            run: |
               VERSION="${{ needs.version.outputs.version }}"
-              sed -i "s/^APP_VERSION = \"dev\"/APP_VERSION = \"${VERSION}\"/" src/gui/main_window.py
+              python - <<EOF
+              import re, pathlib
+              f = pathlib.Path("src/gui/main_window.py")
+              f.write_text(re.sub(r'^APP_VERSION = "dev"', f'APP_VERSION = "{VERSION}"', f.read_text(), count=1, flags=re.MULTILINE))
+              EOF
               echo "APP_VERSION set to ${VERSION}"
 
          - name: Build single-file executable
