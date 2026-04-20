@@ -32,7 +32,7 @@ TC_FONT  = "Consolas"
 TC_SIZE  = 80          # pt – digit labels
 DARK_BG  = "#191919"
 
-APP_VERSION = "dev"
+APP_VERSION = "2024.1.0"  # TODO: revert to "dev" after testing updater
 KOFI_URL    = "https://ko-fi.com/G2G5IPEXX"
 GITHUB_REPO = "libbierose/Techibbie.TimecodeGenerator"
 
@@ -159,11 +159,11 @@ class _UpdateCheckThread(QThread):
             )
             # Find the platform-specific binary asset
             if sys.platform == "win32":
-                asset_suffix = "-windows.exe"
+                asset_suffix = "-Windows.exe"
             elif sys.platform == "darwin":
-                asset_suffix = "-macos"
+                asset_suffix = "-macOS"
             else:
-                asset_suffix = "-linux"
+                asset_suffix = "-Linux"
             asset_url = ""
             for asset in data.get("assets", []):
                 if asset.get("name", "").endswith(asset_suffix):
@@ -405,11 +405,14 @@ class AboutDialog(QDialog):
             if msg.clickedButton() is update_btn:
                 _start_update_download(self, asset_url, tag)
         else:
-            msg.setInformativeText("Open the releases page to download the update?")
-            msg.setStandardButtons(
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            msg.setInformativeText(
+                "No installer was found for your platform. "
+                "Visit the releases page to download manually."
             )
-            if msg.exec() == QMessageBox.StandardButton.Yes:
+            view_btn = msg.addButton("Open Releases Page", QMessageBox.ButtonRole.AcceptRole)
+            msg.addButton("Close", QMessageBox.ButtonRole.RejectRole)
+            msg.exec()
+            if msg.clickedButton() is view_btn:
                 webbrowser.open(url)
 
     def _on_no_update(self):
@@ -1068,12 +1071,14 @@ class TimecodeGeneratorWindow(QMainWindow):
             if msg.clickedButton() is update_btn:
                 _start_update_download(self, asset_url, tag)
         else:
-            msg.setInformativeText("Open the releases page to download the update?")
-            msg.setStandardButtons(
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            msg.setInformativeText(
+                "No installer was found for your platform. "
+                "Visit the releases page to download manually."
             )
-            msg.setDefaultButton(QMessageBox.StandardButton.Yes)
-            if msg.exec() == QMessageBox.StandardButton.Yes:
+            view_btn = msg.addButton("Open Releases Page", QMessageBox.ButtonRole.AcceptRole)
+            msg.addButton("Close", QMessageBox.ButtonRole.RejectRole)
+            msg.exec()
+            if msg.clickedButton() is view_btn:
                 webbrowser.open(url)
 
     # ── Close ─────────────────────────────────────────────────────────────────
