@@ -1,3 +1,7 @@
+[![CI](https://github.com/libbierose/timecode/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/libbierose/timecode/actions/workflows/ci.yml)
+
+[![Build & Release](https://github.com/libbierose/timecode/actions/workflows/release.yml/badge.svg?branch=release)](https://github.com/libbierose/timecode/actions/workflows/release.yml)
+
 # Timecode Generator
 
 A cross-platform desktop application that generates **SMPTE Linear Timecode (LTC)** and displays a real-time timecode clock. Designed for film/video production workflows where a reliable, professional-grade timecode source is needed — including direct integration with **DaVinci Resolve** and other NLEs via audio output.
