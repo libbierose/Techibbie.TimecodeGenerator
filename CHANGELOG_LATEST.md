@@ -2,4 +2,4 @@
 
 ## Notes
 
-No changes just checking updater works
+No changes just checking updater works with download and replace!
