@@ -1,0 +1,730 @@
+"""
+Main GUI window – dark full-screen timecode display.
+"""
+
+import sys
+from datetime import datetime, timedelta
+
+from PyQt6.QtWidgets import (
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
+    QPushButton, QSpinBox, QCheckBox, QMessageBox,
+    QDialog, QFormLayout, QDialogButtonBox, QSizePolicy, QFileDialog,
+)
+from PyQt6.QtCore import QTimer, Qt, QSize, QSettings
+from PyQt6.QtGui import QFont, QFontMetrics
+import qtawesome as qta
+
+from timecode.timecode_handler import TimecodeHandler
+from audio.audio_handler import AudioHandler
+
+# ── Design tokens ─────────────────────────────────────────────────────────────
+TC_GREEN = "#4ADE80"
+TC_FONT  = "Consolas"
+TC_SIZE  = 80          # pt – digit labels
+DARK_BG  = "#191919"
+
+STYLE = f"""
+QMainWindow, QWidget {{ background: {DARK_BG}; color: #cccccc; }}
+QLabel {{ background: transparent; }}
+
+/* ── Toolbar icon buttons ── */
+QPushButton#icon_btn {{
+    background: transparent;
+    border: none;
+    color: #606060;
+    font-size: 20px;
+    border-radius: 8px;
+    min-width: 44px; max-width: 44px;
+    min-height: 44px; max-height: 44px;
+    padding: 0;
+}}
+QPushButton#icon_btn:hover   {{ background: #252525; color: #aaaaaa; }}
+QPushButton#icon_btn:pressed {{ background: #303030; }}
+QPushButton#icon_btn:disabled {{ color: #353535; }}
+QPushButton#icon_btn[active="true"] {{ color: {TC_GREEN}; }}
+
+/* ── Centre play/pause button ── */
+QPushButton#play_btn {{
+    background: #2b2b2b;
+    border: none;
+    color: #cccccc;
+    font-size: 22px;
+    border-radius: 10px;
+    min-width: 52px; max-width: 52px;
+    min-height: 52px; max-height: 52px;
+    padding: 0;
+}}
+QPushButton#play_btn:hover   {{ background: #363636; }}
+QPushButton#play_btn:pressed {{ background: #424242; }}
+
+/* ── Settings dialog ── */
+QDialog, QDialog QWidget {{ background: #222222; color: #cccccc; }}
+QDialog QLabel {{ background: transparent; }}
+QDialog QComboBox {{
+    background: #2d2d2d; border: 1px solid #3a3a3a; border-radius: 5px;
+    padding: 5px 10px; color: #ccc; min-height: 30px;
+}}
+QDialog QComboBox::drop-down {{ border: none; }}
+QDialog QComboBox QAbstractItemView {{
+    background: #2d2d2d; border: 1px solid #3a3a3a;
+    selection-background-color: #383838; color: #ccc;
+    outline: none;
+}}
+QDialog QCheckBox {{ spacing: 8px; }}
+QDialog QCheckBox::indicator {{
+    width: 17px; height: 17px;
+    border: 1px solid #555; border-radius: 4px; background: #2d2d2d;
+}}
+QDialog QCheckBox::indicator:checked {{ background: {TC_GREEN}; border-color: {TC_GREEN}; }}
+QDialog QSpinBox {{
+    background: #2d2d2d; border: 1px solid #3a3a3a; border-radius: 5px;
+    padding: 5px 10px; color: #ccc; min-height: 30px;
+}}
+QDialog QPushButton {{
+    background: #2d2d2d; border: 1px solid #3a3a3a; border-radius: 5px;
+    padding: 7px 18px; color: #ccc; min-height: 30px; min-width: 80px;
+}}
+QDialog QPushButton:hover {{ background: #383838; }}
+"""
+
+
+# ── Icon size for toolbar buttons ────────────────────────────────────────────
+_ICON_SIZE = QSize(20, 20)
+_ICON_COLOR = "#b2b2b2"
+_ICON_COLOR_ACTIVE = TC_GREEN
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _icon_btn(fa_name: str, tooltip: str = "", color: str = _ICON_COLOR) -> QPushButton:
+    btn = QPushButton()
+    btn.setObjectName("icon_btn")
+    btn.setIcon(qta.icon(fa_name, color=color))
+    btn.setIconSize(_ICON_SIZE)
+    if tooltip:
+        btn.setToolTip(tooltip)
+    return btn
+
+
+def _set_btn_icon(btn: QPushButton, fa_name: str, color: str = _ICON_COLOR):
+    btn.setIcon(qta.icon(fa_name, color=color))
+    btn.setIconSize(_ICON_SIZE)
+
+
+def _divider() -> QWidget:
+    w = QWidget()
+    w.setFixedHeight(1)
+    w.setStyleSheet("background: #2e2e2e;")
+    return w
+
+
+# ── Settings dialog ───────────────────────────────────────────────────────────
+
+class SettingsDialog(QDialog):
+    """All configuration in one modal dialog."""
+
+    def __init__(self, parent: "TimecodeGeneratorWindow"):
+        super().__init__(parent)
+        self.setWindowTitle("Settings")
+        self.setMinimumWidth(500)
+        self.setModal(True)
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(14)
+        layout.setContentsMargins(28, 24, 28, 20)
+
+        form = QFormLayout()
+        form.setSpacing(10)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
+        # FPS
+        self.fps_combo = QComboBox()
+        for fps in parent.timecode_handler.get_supported_fps():
+            self.fps_combo.addItem(str(fps), fps)
+        idx = self.fps_combo.findData(parent.timecode_handler.fps)
+        if idx >= 0:
+            self.fps_combo.setCurrentIndex(idx)
+        form.addRow("Frame Rate:", self.fps_combo)
+
+        # Audio device
+        self.device_combo = QComboBox()
+        for dev in parent._audio_devices:
+            sr = int(dev["sample_rate"])
+            self.device_combo.addItem(
+                f"{dev['name']}  ({dev['channels']}ch · {sr}\u202fHz)",
+                dev["id"],
+            )
+        for i in range(self.device_combo.count()):
+            if self.device_combo.itemData(i) == parent.selected_audio_device:
+                self.device_combo.setCurrentIndex(i)
+                break
+        form.addRow("Audio Device:", self.device_combo)
+
+        layout.addLayout(form)
+
+        # Sample-rate info
+        self.sr_lbl = QLabel("")
+        self.sr_lbl.setStyleSheet("color: #a08000; font-size: 11px;")
+        self.sr_lbl.setWordWrap(True)
+        layout.addWidget(self.sr_lbl)
+        self.device_combo.currentIndexChanged.connect(self._refresh_sr)
+        self._refresh_sr()
+
+        layout.addWidget(_divider())
+
+        # Checkboxes
+        self.ltc_check   = QCheckBox("Enable LTC output  (for DaVinci Resolve / NLEs)")
+        self.audio_check = QCheckBox("Enable audio  (click tones when LTC is off)")
+        self.utc_check   = QCheckBox("Use real-time UTC clock instead of elapsed time")
+        self.ltc_check.setChecked(parent.audio_handler.ltc_mode)
+        self.audio_check.setChecked(parent.enable_audio)
+        self.utc_check.setChecked(parent.use_utc_time)
+        for cb in (self.ltc_check, self.audio_check, self.utc_check):
+            layout.addWidget(cb)
+
+        layout.addWidget(_divider())
+
+        # Save WAV
+        save_btn = QPushButton("Save LTC to WAV File…")
+        save_btn.clicked.connect(parent.on_save_ltc_wav)
+        layout.addWidget(save_btn)
+
+        # OK / Cancel
+        btns = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        btns.accepted.connect(self.accept)
+        btns.rejected.connect(self.reject)
+        layout.addWidget(btns)
+
+    def _refresh_sr(self):
+        import sounddevice as sd
+        try:
+            dev_id = self.device_combo.currentData()
+            if dev_id is not None:
+                sr = int(sd.query_devices(dev_id)["default_samplerate"])
+                self.sr_lbl.setText(
+                    f"Device native rate: {sr}\u202fHz — LTC will be generated at this rate."
+                    if sr != 48000 else ""
+                )
+        except Exception:
+            self.sr_lbl.setText("")
+
+
+# ── Main window ───────────────────────────────────────────────────────────────
+
+class TimecodeGeneratorWindow(QMainWindow):
+    """Main window — dark full-screen timecode display."""
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Timecode Generator")
+        self.resize(1100, 420)
+        self.setMinimumSize(860, 340)
+
+        self.timecode_handler = TimecodeHandler(30.0)
+        self.audio_handler    = AudioHandler()
+
+        self.is_running            = False
+        self.start_time: datetime | None = None
+        self.last_frame            = -1
+        self.enable_audio          = True
+        self.use_utc_time          = False
+        self.selected_audio_device = None
+        self._audio_devices: list  = []
+
+        self.setStyleSheet(STYLE)
+        self._build_ui()
+
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_timecode)
+        self.timer.setInterval(5)  # 200 Hz – smooth frame display
+
+        self._refresh_devices()
+        self._load_settings()
+
+    def _build_ui(self):
+        root_widget = QWidget()
+        self.setCentralWidget(root_widget)
+
+        root = QVBoxLayout(root_widget)
+        root.setContentsMargins(0, 28, 0, 22)
+        root.setSpacing(0)
+
+        root.addStretch(2)
+
+        # ── Timecode digit pairs with field labels ────────────────────────────
+        tc_row = QHBoxLayout()
+        tc_row.setSpacing(0)
+
+        self.tc_digits:  list[QLabel] = []
+        self.tc_colons:  list[QLabel] = []
+        self.tc_fields:  list[QLabel] = []
+
+        for idx, fname in enumerate(("HOURS", "MINUTES", "SECONDS", "FRAMES")):
+            # Colon separator
+            if idx > 0:
+                colon_col = QWidget()
+                colon_col.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+                cv = QVBoxLayout(colon_col)
+                cv.setContentsMargins(0, 0, 0, 0)
+                cv.setSpacing(0)
+
+                cl = QLabel(":")
+                cl.setFont(QFont(TC_FONT, TC_SIZE))
+                cl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                cl.setStyleSheet(f"color: {TC_GREEN};")
+                cv.addWidget(cl)
+                self.tc_colons.append(cl)
+
+                spacer = QLabel()
+                spacer.setFixedHeight(22)
+                cv.addWidget(spacer)
+
+                tc_row.addWidget(colon_col)
+
+            # Digit + field name stacked
+            pair = QWidget()
+            pv   = QVBoxLayout(pair)
+            pv.setContentsMargins(0, 0, 0, 0)
+            pv.setSpacing(4)
+
+            d = QLabel("00")
+            d.setFont(QFont(TC_FONT, TC_SIZE))
+            d.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            d.setStyleSheet(f"color: {TC_GREEN};")
+            pv.addWidget(d)
+            self.tc_digits.append(d)
+
+            fl = QLabel(fname)
+            fl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            fl.setStyleSheet("color: #707070; font-family: 'Segoe UI'; font-size: 10pt; letter-spacing: 2px; font-weight: 400;")
+            pv.addWidget(fl)
+            self.tc_fields.append(fl)
+
+            tc_row.addWidget(pair)
+
+        root.addLayout(tc_row)
+
+        root.addStretch(3)
+
+        # ── Status line ────────────────────────────────────────────────────────
+        self.status_label = QLabel("Stopped  ·  30 fps  ·  NDF")
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_label.setStyleSheet("color: #383838; font-size: 10pt;")
+        root.addWidget(self.status_label)
+
+        root.addSpacing(14)
+
+        # ── Toolbar ────────────────────────────────────────────────────────────
+        tb = QHBoxLayout()
+        tb.setSpacing(4)
+
+        # Left: save WAV
+        self.save_wav_btn = _icon_btn("fa6s.floppy-disk", "Save LTC to WAV file")
+        self.save_wav_btn.clicked.connect(self.on_save_ltc_wav)
+        tb.addWidget(self.save_wav_btn)
+
+        tb.addStretch(1)
+
+        # Centre cluster
+        self.back_btn = _icon_btn("fa6s.rotate-left", "Skip back 30 frames")
+        self.back_btn.clicked.connect(self.on_skip_back)
+        self.back_btn.setEnabled(False)
+        tb.addWidget(self.back_btn)
+
+        self.stop_btn = _icon_btn("fa6s.stop", "Stop")
+        self.stop_btn.setEnabled(False)
+        self.stop_btn.clicked.connect(self.on_stop_clicked)
+        tb.addWidget(self.stop_btn)
+
+        self.play_pause_btn = QPushButton()
+        self.play_pause_btn.setObjectName("play_btn")
+        self.play_pause_btn.setIcon(qta.icon("fa6s.play", color="#cccccc"))
+        self.play_pause_btn.setIconSize(QSize(22, 22))
+        self.play_pause_btn.setToolTip("Start / Pause")
+        self.play_pause_btn.clicked.connect(self.on_play_pause_clicked)
+        tb.addWidget(self.play_pause_btn)
+
+        self.ltc_btn = _icon_btn("fa6s.circle-dot", "Toggle LTC output")
+        self.ltc_btn.setProperty("active", "false")
+        self.ltc_btn.clicked.connect(self.on_ltc_btn_clicked)
+        tb.addWidget(self.ltc_btn)
+
+        self.fwd_btn = _icon_btn("fa6s.rotate-right", "Skip forward 30 frames")
+        self.fwd_btn.clicked.connect(self.on_skip_fwd)
+        self.fwd_btn.setEnabled(False)
+        tb.addWidget(self.fwd_btn)
+
+        tb.addStretch(1)
+
+        # Right: fps badge + settings
+        self.fps_label = QLabel("30 fps")
+        self.fps_label.setStyleSheet("color: #404040; font-size: 11pt; font-weight: 300;")
+        self.fps_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        tb.addWidget(self.fps_label)
+
+        self.settings_btn = _icon_btn("fa6s.gear", "Settings")
+        self.settings_btn.clicked.connect(self.on_settings_clicked)
+        tb.addWidget(self.settings_btn)
+
+        root.addLayout(tb)
+
+        # These widgets are hidden in the main UI — settings are now managed
+        # through SettingsDialog — but are kept as instance attributes so that
+        # internal enable/disable helpers can reference them without guards.
+        self.fps_combo        = QComboBox(root_widget);        self.fps_combo.setVisible(False)
+        self.device_combo     = QComboBox(root_widget);        self.device_combo.setVisible(False)
+        self.sr_warning_label = QLabel(root_widget);           self.sr_warning_label.setVisible(False)
+
+        for fps in self.timecode_handler.get_supported_fps():
+            self.fps_combo.addItem(str(fps), fps)
+        self.fps_combo.setCurrentText("30")
+
+    # ── Device management ─────────────────────────────────────────────────────
+
+    def _refresh_devices(self):
+        self._audio_devices = self.audio_handler.get_audio_devices()
+        self.device_combo.clear()
+        for dev in self._audio_devices:
+            sr = int(dev["sample_rate"])
+            self.device_combo.addItem(
+                f"{dev['name']} ({dev['channels']}ch, {sr}Hz)", dev["id"]
+            )
+        if self._audio_devices:
+            self.selected_audio_device = self._audio_devices[0]["id"]
+
+    def populate_audio_devices(self):
+        self._refresh_devices()
+
+    def _update_sr_warning(self):
+        pass  # handled in SettingsDialog
+
+    # ── Persist settings ──────────────────────────────────────────────────────
+
+    def _save_settings(self):
+        s = QSettings("TimecodeGenerator", "TimecodeGenerator")
+        s.setValue("geometry",     self.saveGeometry())
+        s.setValue("fps",          self.timecode_handler.fps)
+        s.setValue("ltc_mode",     self.audio_handler.ltc_mode)
+        s.setValue("enable_audio", self.enable_audio)
+        s.setValue("use_utc_time", self.use_utc_time)
+        if self.selected_audio_device is not None:
+            s.setValue("audio_device", self.selected_audio_device)
+
+    def _load_settings(self):
+        s = QSettings("TimecodeGenerator", "TimecodeGenerator")
+        geom = s.value("geometry")
+        if geom:
+            self.restoreGeometry(geom)
+        fps = s.value("fps", 30.0, type=float)
+        self.timecode_handler = TimecodeHandler(fps)
+        raw_dev = s.value("audio_device", None)
+        if raw_dev is not None:
+            dev_id = int(raw_dev)
+            if dev_id in [d["id"] for d in self._audio_devices]:
+                self.selected_audio_device = dev_id
+        ltc = s.value("ltc_mode", False, type=bool)
+        self.audio_handler.set_ltc_mode(ltc)
+        _set_btn_icon(
+            self.ltc_btn, "fa6s.circle-dot",
+            color=_ICON_COLOR_ACTIVE if ltc else _ICON_COLOR,
+        )
+        self.enable_audio = s.value("enable_audio", True, type=bool)
+        self.use_utc_time = s.value("use_utc_time", False, type=bool)
+        self._refresh_status()
+
+    # ── Status helper ─────────────────────────────────────────────────────────
+
+    def _refresh_status(self):
+        fps   = self.timecode_handler.fps
+        drop  = "DF" if self.timecode_handler.is_drop_frame() else "NDF"
+        ltc   = "  ·  LTC ON" if self.audio_handler.ltc_mode else ""
+        if self.is_running:
+            state = "Running"
+        elif self.start_time is not None:
+            state = "Paused"
+        else:
+            state = "Stopped"
+        self.status_label.setText(f"{state}  ·  {fps:g} fps  ·  {drop}{ltc}")
+        self.fps_label.setText(f"{fps:g} fps")
+
+    # ── Toolbar slots ─────────────────────────────────────────────────────────
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # Target: timecode fills 80% of window width (10% margin each side).
+        # Binary-search for the largest pt where "00:00:00:00" fits that width.
+        target_px = int(self.width() * 0.80)
+        lo, hi = 10, 400
+        while lo < hi - 1:
+            mid = (lo + hi) // 2
+            if QFontMetrics(QFont(TC_FONT, mid)).horizontalAdvance("00:00:00:00") <= target_px:
+                lo = mid
+            else:
+                hi = mid
+        pt = max(14, lo)
+        f = QFont(TC_FONT, pt)
+        for lbl in self.tc_digits:
+            lbl.setFont(f)
+        for cl in self.tc_colons:
+            cl.setFont(f)
+        fpt = max(8, int(pt * 0.12))
+        for fl in self.tc_fields:
+            fl.setStyleSheet(
+                f"color: #707070; font-family: 'Segoe UI'; font-size: {fpt}pt; letter-spacing: 2px; font-weight: 400;"
+            )
+
+    def on_play_pause_clicked(self):
+        if not self.is_running:
+            self.on_start_clicked()
+        else:
+            self.on_pause_clicked()
+
+    def on_ltc_btn_clicked(self):
+        ltc = not self.audio_handler.ltc_mode
+        self.audio_handler.set_ltc_mode(ltc)
+        # Update icon colour directly (property re-polish doesn't affect QIcon)
+        _set_btn_icon(
+            self.ltc_btn, "fa6s.circle-dot",
+            color=_ICON_COLOR_ACTIVE if ltc else _ICON_COLOR,
+        )
+        if self.is_running and self.enable_audio:
+            if ltc:
+                self.audio_handler.start_ltc_stream(
+                    0, 0, 0, 0,
+                    self.timecode_handler.fps,
+                    self.timecode_handler.is_drop_frame(),
+                    self.selected_audio_device,
+                )
+            else:
+                self.audio_handler.stop_ltc_stream()
+        self._refresh_status()
+
+    def on_skip_back(self):
+        if self.start_time is not None:
+            self.start_time += timedelta(seconds=30 / self.timecode_handler.fps)
+
+    def on_skip_fwd(self):
+        if self.start_time is not None:
+            self.start_time -= timedelta(seconds=30 / self.timecode_handler.fps)
+
+    def on_settings_clicked(self):
+        dlg = SettingsDialog(self)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        # Apply FPS
+        fps = float(dlg.fps_combo.currentData())
+        if fps != self.timecode_handler.fps:
+            self.timecode_handler = TimecodeHandler(fps)
+
+        # Apply device
+        self.selected_audio_device = dlg.device_combo.currentData()
+
+        # Apply LTC
+        ltc = dlg.ltc_check.isChecked()
+        if ltc != self.audio_handler.ltc_mode:
+            self.audio_handler.set_ltc_mode(ltc)
+            _set_btn_icon(
+                self.ltc_btn, "fa6s.circle-dot",
+                color=_ICON_COLOR_ACTIVE if ltc else _ICON_COLOR,
+            )
+            if self.is_running and self.enable_audio:
+                if ltc:
+                    self.audio_handler.start_ltc_stream(
+                        0, 0, 0, 0, fps,
+                        self.timecode_handler.is_drop_frame(),
+                        self.selected_audio_device,
+                    )
+                else:
+                    self.audio_handler.stop_ltc_stream()
+
+        self.enable_audio = dlg.audio_check.isChecked()
+        self.use_utc_time = dlg.utc_check.isChecked()
+        if self.use_utc_time:
+            self.start_time = None
+        self._save_settings()
+        self._refresh_status()
+
+    # ── Playback slots ────────────────────────────────────────────────────────
+
+    def on_start_clicked(self):
+        if not self.is_running:
+            self.is_running = True
+            self.start_time = datetime.now()
+            self.timer.start()
+            self.play_pause_btn.setIcon(qta.icon("fa6s.pause", color="#cccccc"))
+            self.stop_btn.setEnabled(True)
+            self.back_btn.setEnabled(True)
+            self.fwd_btn.setEnabled(True)
+            self.settings_btn.setEnabled(False)
+            self.fps_combo.setEnabled(False)
+            self.device_combo.setEnabled(False)
+            if self.enable_audio and self.audio_handler.ltc_mode:
+                self.audio_handler.start_ltc_stream(
+                    0, 0, 0, 0,
+                    self.timecode_handler.fps,
+                    self.timecode_handler.is_drop_frame(),
+                    self.selected_audio_device,
+                )
+            self._refresh_status()
+
+    def on_pause_clicked(self):
+        if self.is_running:
+            self.is_running = False
+            self.timer.stop()
+            self.audio_handler.stop_ltc_stream()
+            self.play_pause_btn.setIcon(qta.icon("fa6s.play", color="#cccccc"))
+            self._refresh_status()
+
+    def on_stop_clicked(self):
+        self.is_running = False
+        self.timer.stop()
+        self.audio_handler.stop_ltc_stream()
+        self.start_time = None
+        self.last_frame = -1
+        for d in self.tc_digits:
+            d.setText("00")
+        self.play_pause_btn.setIcon(qta.icon("fa6s.play", color="#cccccc"))
+        self.stop_btn.setEnabled(False)
+        self.back_btn.setEnabled(False)
+        self.fwd_btn.setEnabled(False)
+        self.settings_btn.setEnabled(True)
+        self.fps_combo.setEnabled(True)
+        self.device_combo.setEnabled(True)
+        self._refresh_status()
+
+    def on_reset_clicked(self):
+        self.on_stop_clicked()
+
+    # ── Timecode update ───────────────────────────────────────────────────────
+
+    def update_timecode(self):
+        if not self.is_running or self.start_time is None:
+            return
+
+        elapsed = (datetime.now() - self.start_time).total_seconds()
+        base_tc = self.timecode_handler.elapsed_time_to_timecode(elapsed)
+
+        if self.use_utc_time:
+            # In UTC mode the display shows the current wall-clock time rather
+            # than elapsed time, while base_tc (elapsed) is still used for the
+            # LTC audio stream so it remains gapless.
+            now = datetime.utcnow()
+            display_tc = (
+                f"{now.hour:02d}:{now.minute:02d}:{now.second:02d}:"
+                f"{int(now.microsecond / 1_000_000 * self.timecode_handler.fps):02d}"
+            )
+        else:
+            display_tc = base_tc
+
+        parts = display_tc.split(":")
+        if len(parts) == 4:
+            for lbl, val in zip(self.tc_digits, parts):
+                lbl.setText(val)
+
+        current_frame = int(elapsed * self.timecode_handler.fps)
+        if self.enable_audio and current_frame != self.last_frame:
+            if not self.audio_handler.ltc_mode:
+                self.audio_handler.play_frame_click(
+                    current_frame, self.timecode_handler.fps, self.selected_audio_device
+                )
+            self.last_frame = current_frame
+
+    # ── WAV export ────────────────────────────────────────────────────────────
+
+    def on_save_ltc_wav(self):
+        import wave
+        import numpy as np
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Save LTC WAV")
+        form = QFormLayout(dlg)
+        dur_spin = QSpinBox()
+        dur_spin.setRange(1, 3600)
+        dur_spin.setValue(60)
+        dur_spin.setSuffix(" seconds")
+        form.addRow("Duration:", dur_spin)
+        btns = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        btns.accepted.connect(dlg.accept)
+        btns.rejected.connect(dlg.reject)
+        form.addRow(btns)
+
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        duration = dur_spin.value()
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save LTC WAV", "ltc_timecode.wav", "WAV Files (*.wav)"
+        )
+        if not path:
+            return
+
+        fps  = self.timecode_handler.fps
+        drop = self.timecode_handler.is_drop_frame()
+        from audio.ltc_generator import LTCGenerator
+        gen   = LTCGenerator(48000)
+        audio = gen.generate_continuous_ltc(1, 0, 0, 0, fps, drop, float(duration))
+        # Convert float32 [-1, 1] to signed 16-bit PCM for WAV compatibility
+        data  = (audio * 32767).astype(np.int16)
+
+        try:
+            with wave.open(path, "w") as wf:
+                wf.setnchannels(1)      # Mono — LTC is always a single-channel signal
+                wf.setsampwidth(2)      # 16-bit PCM (2 bytes per sample)
+                wf.setframerate(48000)  # Standard broadcast sample rate
+                wf.writeframes(data.tobytes())
+            QMessageBox.information(
+                self, "Saved",
+                f"LTC WAV saved:\n{path}\n\n"
+                f"{duration}s · {fps:g}\u202ffps · 48\u202fkHz · starts at 01:00:00:00",
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save WAV:\n{e}")
+
+    # ── Compat stubs ──────────────────────────────────────────────────────────
+
+    def on_fps_changed(self):
+        fps = float(self.fps_combo.currentData())
+        self.timecode_handler = TimecodeHandler(fps)
+        self._refresh_status()
+
+    def on_device_changed(self):
+        self.selected_audio_device = self.device_combo.currentData()
+
+    def on_audio_toggle(self):
+        pass
+
+    def on_ltc_mode_toggle(self):
+        pass
+
+    def on_utc_mode_toggle(self):
+        pass
+
+    def show_obs_help(self):
+        pass
+
+    # ── Close ─────────────────────────────────────────────────────────────────
+
+    def closeEvent(self, event):
+        self._save_settings()
+        self.on_stop_clicked()
+        self.audio_handler.shutdown()
+        event.accept()
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+
+def main():
+    from PyQt6.QtWidgets import QApplication
+    app = QApplication(sys.argv)
+    app.setStyleSheet(STYLE)          # apply dark theme to dialogs too
+    window = TimecodeGeneratorWindow()
+    window.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,55 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Distribution / packaging ──────────────────────────────────────────────────
+dist/
+build/
+*.egg-info/
+*.egg
+
+# ── Test caches ───────────────────────────────────────────────────────────────
+.pytest_cache/
+.tox/
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+
+# ── Type checker / linter ─────────────────────────────────────────────────────
+.mypy_cache/
+.ruff_cache/
+pyrightconfig.json
+
+# ── IDE / editor ──────────────────────────────────────────────────────────────
+.idea/
+*.suo
+*.user
+*.sln.docstates
+# Keep .vscode/settings.json but ignore user-specific files
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/*.code-snippets
+
+# ── OS generated ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Generated / output files ──────────────────────────────────────────────────
+*.wav
+*.log
+*.tmp
+
+# ── Qt / PyQt ─────────────────────────────────────────────────────────────────
+# QSettings on Windows is stored in the registry, not a file.
+# Any .ini fallback files:
+*.ini
