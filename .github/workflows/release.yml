@@ -1,14 +1,20 @@
 name: Build & Release
 
-# Trigger on version tags (e.g. v1.0.0) or manually from the Actions tab.
+# Triggers:
+#   1. Any push to the `release` branch       → build all platforms + publish a
+#      pre-release so the binaries are always available from the latest release code.
+#   2. A version tag (v*.*.*) pushed to any branch → build + publish a full release.
+#   3. Manual trigger from the Actions tab    → build only (no release created).
 on:
    push:
+      branches:
+         - release
       tags:
          - "v*.*.*"
    workflow_dispatch:
 
 jobs:
-   # ── Build job — runs in parallel on all three platforms ───────────────────
+   # ── Build job — runs in parallel on all three platforms ─────────────────────
    build:
       name: Build (${{ matrix.os }})
       runs-on: ${{ matrix.os }}
@@ -63,13 +69,13 @@ jobs:
               name: ${{ matrix.artifact }}
               path: dist/${{ matrix.artifact }}
 
-   # ── Release job — runs after all builds succeed ───────────────────────────
+   # ── Release job — runs after all builds succeed ──────────────────────────────
    release:
-      name: Create GitHub Release
+      name: Publish Release
       needs: build
       runs-on: ubuntu-latest
-      # Only publish a release when triggered by a tag push, not a manual run.
-      if: startsWith(github.ref, 'refs/tags/')
+      # Don't publish anything on a manual workflow_dispatch run.
+      if: github.event_name != 'workflow_dispatch'
       permissions:
          contents: write # required to create releases and upload assets
 
@@ -80,7 +86,25 @@ jobs:
               path: artifacts
               merge-multiple: true # flatten into a single directory
 
-         - name: Create release and attach binaries
+         # Push to `release` branch (not a tag) → rolling "latest" pre-release.
+         # The existing `latest-release` release is deleted and recreated so the
+         # binaries always reflect the current state of the release branch.
+         - name: Publish rolling pre-release (release branch)
+           if: github.ref == 'refs/heads/release'
+           uses: softprops/action-gh-release@v2
+           with:
+              tag_name: latest-release
+              name: Latest Release Build
+              prerelease: true
+              generate_release_notes: false
+              body: |
+                 Automated build from the `release` branch — commit ${{ github.sha }}.
+                 This is updated on every push to `release` and is not a versioned release.
+              files: artifacts/*
+
+         # Push of a version tag → proper versioned release.
+         - name: Publish versioned release (tag)
+           if: startsWith(github.ref, 'refs/tags/')
            uses: softprops/action-gh-release@v2
            with:
               generate_release_notes: true # auto-generate notes from commits/PRs

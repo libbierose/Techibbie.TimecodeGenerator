@@ -1,0 +1,53 @@
+name: CI
+
+# Run a quick syntax / import check on every push to `dev` and on pull requests
+# targeting `release`.  This catches broken imports and obvious errors before
+# anything reaches the release branch.
+on:
+   push:
+      branches:
+         - dev
+   pull_request:
+      branches:
+         - release
+
+jobs:
+   lint:
+      name: Check (${{ matrix.os }})
+      runs-on: ${{ matrix.os }}
+      strategy:
+         fail-fast: false
+         matrix:
+            os: [ubuntu-latest, windows-latest]
+
+      steps:
+         - name: Checkout code
+           uses: actions/checkout@v4
+
+         - name: Set up Python 3.12
+           uses: actions/setup-python@v5
+           with:
+              python-version: "3.12"
+              cache: pip
+
+         - name: Install PortAudio (Linux only)
+           if: runner.os == 'Linux'
+           run: sudo apt-get update && sudo apt-get install -y libportaudio2 portaudio19-dev
+
+         - name: Install dependencies
+           run: |
+              python -m pip install --upgrade pip
+              pip install -r requirements.txt
+
+         # Verify every Python file compiles without syntax errors.
+         - name: Syntax check (py_compile)
+           run: python -m py_compile src/main.py src/gui/main_window.py src/audio/audio_handler.py src/audio/ltc_generator.py src/timecode/timecode_handler.py
+
+         # Verify the core packages import cleanly (catches missing deps / bad imports).
+         - name: Import check
+           run: |
+              python -c "import sys; sys.path.insert(0,'src'); from audio.ltc_generator import LTCGenerator; from timecode.timecode_handler import TimecodeHandler; print('imports OK')"
+
+         # Run the LTC encoding verification tool as a smoke test.
+         - name: LTC encoding smoke test
+           run: python tools/test_ltc_detailed.py

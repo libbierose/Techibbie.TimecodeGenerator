@@ -150,7 +150,57 @@ timecode/
 
 ---
 
-## Building a standalone executable
+## Branch strategy
+
+```
+dev  ──────────────────────────────────►  ongoing work
+       │                    │
+       │  PR / merge        │  PR / merge
+       ▼                    ▼
+     release ──────────────────────────►  always stable + built
+```
+
+| Branch    | Purpose                    | CI                                                               |
+| --------- | -------------------------- | ---------------------------------------------------------------- |
+| `dev`     | Day-to-day development     | Syntax check + LTC smoke test on every push                      |
+| `release` | Stable, ready-to-ship code | Full 3-platform build + pre-release binaries on every push/merge |
+
+### First-time setup
+
+After pushing the repo to GitHub, run the included script to create both branches:
+
+```powershell
+.\setup-branches.ps1
+```
+
+Then in **GitHub → Settings → Branches**, set `dev` as the default branch and add a branch protection rule on `release` requiring a pull request before merging.
+
+### Day-to-day workflow
+
+```bash
+# Work on dev
+git checkout dev
+git commit -m "my change"
+git push                    # triggers CI checks
+
+# Ship to release
+git checkout release
+git merge dev
+git push                    # triggers 3-platform build + updates pre-release binaries
+```
+
+### Versioned releases
+
+Tag any commit on `release` to publish a permanent versioned release:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+---
+
+## Building locally
 
 Requires [PyInstaller](https://pyinstaller.org):
 
@@ -160,17 +210,6 @@ pyinstaller timecode.spec
 ```
 
 The output lands in `dist/timecode` (`dist/timecode.exe` on Windows).
-
----
-
-## Creating a release
-
-Pushing a version tag triggers the GitHub Actions workflow, which builds executables on all three platforms and publishes them as a GitHub Release automatically:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
 
 ---
 
