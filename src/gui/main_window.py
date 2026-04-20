@@ -131,6 +131,12 @@ class _UpdateCheckThread(QThread):
     """Background thread that checks the GitHub API for a newer release."""
 
     update_available = pyqtSignal(str, str)   # (latest_tag, release_html_url)
+    no_update        = pyqtSignal()           # emitted when already up to date
+    check_failed     = pyqtSignal()           # emitted on network/parse error
+
+    def __init__(self, parent=None, silent: bool = True):
+        super().__init__(parent)
+        self.silent = silent   # True = startup check (no feedback if up to date)
 
     def run(self):
         try:
@@ -148,8 +154,11 @@ class _UpdateCheckThread(QThread):
             )
             if tag and tag != APP_VERSION and APP_VERSION != "dev":
                 self.update_available.emit(tag, html_url)
+            elif not self.silent:
+                self.no_update.emit()
         except Exception:
-            pass   # silently ignore network / parse errors
+            if not self.silent:
+                self.check_failed.emit()
 
 
 # ── About dialog ──────────────────────────────────────────────────────────────
@@ -206,9 +215,51 @@ class AboutDialog(QDialog):
         )
         layout.addWidget(gh_btn)
 
+        self._update_btn = QPushButton("Check for Updates")
+        self._update_btn.clicked.connect(self._check_for_updates)
+        layout.addWidget(self._update_btn)
+
         close_btns = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         close_btns.rejected.connect(self.reject)
         layout.addWidget(close_btns)
+
+    def _check_for_updates(self):
+        self._update_btn.setText("Checking…")
+        self._update_btn.setEnabled(False)
+        thread = _UpdateCheckThread(self, silent=False)
+        thread.update_available.connect(self._on_update_found)
+        thread.no_update.connect(self._on_no_update)
+        thread.check_failed.connect(self._on_check_failed)
+        thread.finished.connect(thread.deleteLater)
+        thread.start()
+        self._thread = thread   # keep reference alive
+
+    def _on_update_found(self, tag: str, url: str):
+        self._update_btn.setText("Check for Updates")
+        self._update_btn.setEnabled(True)
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Update Available")
+        msg.setText(
+            f"A new version is available!\n\n"
+            f"Installed:  {APP_VERSION}\n"
+            f"Latest:       {tag}"
+        )
+        msg.setInformativeText("Open the releases page to download the update?")
+        msg.setStandardButtons(
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if msg.exec() == QMessageBox.StandardButton.Yes:
+            webbrowser.open(url)
+
+    def _on_no_update(self):
+        self._update_btn.setText("Check for Updates")
+        self._update_btn.setEnabled(True)
+        QMessageBox.information(self, "Up to Date", "You are running the latest version.")
+
+    def _on_check_failed(self):
+        self._update_btn.setText("Check for Updates")
+        self._update_btn.setEnabled(True)
+        QMessageBox.warning(self, "Update Check Failed", "Could not reach GitHub. Check your internet connection and try again.")
 
 
 # ── Settings dialog ───────────────────────────────────────────────────────────
@@ -820,7 +871,7 @@ class TimecodeGeneratorWindow(QMainWindow):
     def _start_update_check(self):
         if not self.check_for_updates:
             return
-        self._update_thread = _UpdateCheckThread(self)
+        self._update_thread = _UpdateCheckThread(self, silent=True)
         self._update_thread.update_available.connect(self._on_update_available)
         self._update_thread.start()
 
