@@ -288,6 +288,8 @@ def _apply_update(new_exe_path: str) -> None:
         current_exe = str(downloads / pathlib.Path(new_exe_path).name)
 
     if sys.platform == "win32":
+        import ctypes
+
         # Windows cannot replace a running executable — delegate to a PowerShell script.
         # We pass the current PID so the script waits until this process fully exits
         # before moving the file (a fixed sleep is unreliable).
@@ -306,16 +308,25 @@ def _apply_update(new_exe_path: str) -> None:
                 f'Start-Process -FilePath "{current_exe}"\n'
                 "Remove-Item -LiteralPath $PSCommandPath -Force\n"
             )
-        subprocess.Popen(  # noqa: S603
-            [
-                "powershell.exe",
-                "-NonInteractive", "-NoProfile",
-                "-ExecutionPolicy", "Bypass",
-                "-File", ps_path,
-            ],
-            creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
-            close_fds=True,
+
+        # Use ShellExecuteW to launch the script — this is the most reliable way
+        # to start a detached process on Windows from a frozen PyInstaller exe.
+        # DETACHED_PROCESS/CREATE_NEW_PROCESS_GROUP via Popen can prevent PowerShell
+        # from initialising when there is no parent console.
+        ps_args = f'-NonInteractive -NoProfile -ExecutionPolicy Bypass -File "{ps_path}"'
+        ret = ctypes.windll.shell32.ShellExecuteW(  # noqa: S603
+            None, "open", "powershell.exe", ps_args, None, 0  # 0 = SW_HIDE
         )
+        if ret <= 32:
+            # ShellExecuteW returns > 32 on success; fall back to Popen
+            subprocess.Popen(  # noqa: S603
+                ["powershell.exe", "-NonInteractive", "-NoProfile",
+                 "-ExecutionPolicy", "Bypass", "-File", ps_path],
+                creationflags=subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
     else:
         # Linux/macOS: safe to replace an open file (inode swap)
         shutil.move(new_exe_path, current_exe)
