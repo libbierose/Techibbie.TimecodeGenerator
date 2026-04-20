@@ -1,8 +1,4 @@
-[![CI](https://github.com/libbierose/Techibbie.TimecodeGenerator/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/libbierose/Techibbie.TimecodeGenerator/actions/workflows/ci.yml)
-
-[![Build & Release](https://github.com/libbierose/Techibbie.TimecodeGenerator/actions/workflows/release.yml/badge.svg?branch=release)](https://github.com/libbierose/Techibbie.TimecodeGenerator/actions/workflows/release.yml)
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/G2G5IPEXX)
+[![CI](https://github.com/libbierose/Techibbie.TimecodeGenerator/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/libbierose/Techibbie.TimecodeGenerator/actions/workflows/ci.yml) [![Build & Release](https://github.com/libbierose/Techibbie.TimecodeGenerator/actions/workflows/release.yml/badge.svg?branch=release)](https://github.com/libbierose/Techibbie.TimecodeGenerator/actions/workflows/release.yml) [![ko-fi](https://img.shields.io/badge/Support%20me%20on-Ko--fi-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/G2G5IPEXX)
 
 # Techibbie Timecode Generator
 
