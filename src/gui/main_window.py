@@ -132,7 +132,7 @@ class _UpdateCheckThread(QThread):
 
     update_available = pyqtSignal(str, str)   # (latest_tag, release_html_url)
     no_update        = pyqtSignal()           # emitted when already up to date
-    check_failed     = pyqtSignal()           # emitted on network/parse error
+    check_failed     = pyqtSignal(str)        # emitted on network/parse error (message)
 
     def __init__(self, parent=None, silent: bool = True):
         super().__init__(parent)
@@ -156,9 +156,17 @@ class _UpdateCheckThread(QThread):
                 self.update_available.emit(tag, html_url)
             elif not self.silent:
                 self.no_update.emit()
+        except urllib.error.HTTPError as e:
+            if not self.silent:
+                if e.code == 404:
+                    self.check_failed.emit(
+                        "No releases found. The repository may be private or have no published releases yet."
+                    )
+                else:
+                    self.check_failed.emit(f"GitHub returned HTTP {e.code}. Please try again later.")
         except Exception:
             if not self.silent:
-                self.check_failed.emit()
+                self.check_failed.emit("Could not reach GitHub. Check your internet connection and try again.")
 
 
 # ── About dialog ──────────────────────────────────────────────────────────────
@@ -256,10 +264,10 @@ class AboutDialog(QDialog):
         self._update_btn.setEnabled(True)
         QMessageBox.information(self, "Up to Date", "You are running the latest version.")
 
-    def _on_check_failed(self):
+    def _on_check_failed(self, message: str):
         self._update_btn.setText("Check for Updates")
         self._update_btn.setEnabled(True)
-        QMessageBox.warning(self, "Update Check Failed", "Could not reach GitHub. Check your internet connection and try again.")
+        QMessageBox.warning(self, "Update Check Failed", message)
 
 
 # ── Settings dialog ───────────────────────────────────────────────────────────
