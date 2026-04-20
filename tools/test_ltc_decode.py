@@ -44,7 +44,7 @@ def test_multiple_frames():
 
             expected = f"00:00:{seconds:02d}:{frame_in_sec:02d}"
             decoded  = f"{h:02d}:{m:02d}:{s:02d}:{f:02d}"
-            status   = "✓" if decoded == expected else "✗"
+            status   = "PASS" if decoded == expected else "FAIL"
             print(f"  Frame {frame_num:2d}  Expected: {expected}  Got: {decoded}  {status}")
         print()
 

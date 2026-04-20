@@ -59,7 +59,7 @@ def analyze_ltc_frame():
     print(f"  Generated: {bit_string[64:80]}")
     print(f"  Expected:  0011111111111101")
     match = bit_string[64:80] == "0011111111111101"
-    print(f"  {'✓ Match' if match else '✗ MISMATCH'}")
+    print(f"  {'Match' if match else 'MISMATCH'}")
 
     # Decode and cross-check
     def get_bcd(start, count):
@@ -71,8 +71,8 @@ def analyze_ltc_frame():
     m = get_bcd(40, 3) * 10 + get_bcd(32, 4)
     s = get_bcd(24, 3) * 10 + get_bcd(16, 4)
     f = get_bcd(8,  2) * 10 + get_bcd(0,  4)
-    print(f"  Timecode: {h:02d}:{m:02d}:{s:02d}:{f:02d}  {'✓' if (h,m,s,f)==(1,15,30,0) else '✗'}")
-    print(f"  Total 1-bits: {sum(ltc_bits)}  (BMPC parity: {'even ✓' if sum(ltc_bits) % 2 == 0 else 'odd ✗'})")
+    print(f"  Timecode: {h:02d}:{m:02d}:{s:02d}:{f:02d}  {'OK' if (h,m,s,f)==(1,15,30,0) else 'MISMATCH'}")
+    print(f"  Total 1-bits: {sum(ltc_bits)}  (BMPC parity: {'even OK' if sum(ltc_bits) % 2 == 0 else 'odd FAIL'})")
 
 
 if __name__ == "__main__":
