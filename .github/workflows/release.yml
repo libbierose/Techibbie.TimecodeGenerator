@@ -9,137 +9,21 @@ name: Build & Release
 #   YYYY = four-digit year, MM = zero-padded month, N = 1-based counter that
 #   resets to 1 each calendar month (e.g. 2026.04.1, 2026.04.2, 2026.05.1 ...).
 on:
-  push:
-    branches:
-      - release
-  workflow_dispatch:
-
-jobs:
-  # ── Build job — runs in parallel on all three platforms ─────────────────────
-  build:
-    name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    # Hard guard: only run if we are actually on the release branch or this is
-    # a manual dispatch.  This prevents the job from executing if the workflow
-    # file is somehow evaluated from the dev branch (e.g. while both branches
-    # still have slightly different versions of this file).
-    if: github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch'
-    strategy:
-      fail-fast: false   # let all three platforms finish even if one fails
-      matrix:
-        include:
-          - os: windows-latest
-            dist_name: timecode.exe
-            artifact: Timecode-Windows.exe
-          - os: ubuntu-latest
-            dist_name: timecode
-            artifact: Timecode-Linux
-          - os: macos-latest
-            dist_name: timecode
-            artifact: Timecode-macOS
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: pip
-
-      # PortAudio is bundled inside the sounddevice wheel on Windows and macOS.
-      # On Linux it must be installed from the system package manager so that
-      # PyInstaller can find and bundle the shared library.
-      - name: Install PortAudio (Linux only)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libportaudio2 portaudio19-dev
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller
-
-      - name: Build single-file executable
-        run: pyinstaller timecode.spec
-
-      # Rename the output to include the platform name so all three files can
-      # coexist in the same GitHub Release without overwriting each other.
-      - name: Rename binary
-        shell: bash
-        run: mv dist/${{ matrix.dist_name }} dist/${{ matrix.artifact }}
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: dist/${{ matrix.artifact }}
-
-  # ── Release job — runs after all builds succeed ──────────────────────────────
-  release:
-    name: Publish Release
-    needs: build
-    runs-on: ubuntu-latest
-    # Only publish on branch pushes; skip manual workflow_dispatch runs.
-    if: github.event_name == 'push'
-    permissions:
-      contents: write   # required to push tags and create releases
-
-    steps:
-      - name: Checkout code (full history + tags)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0   # needed so we can list all existing tags
-
-      # Compute the next CalVer version for this month.
-      # - Fetch all remote tags.
-      # - List tags that match YYYY.MM.* for the current month.
-      # - Find the highest N; increment by 1 (default to 1 if none exist yet).
-      - name: Compute CalVer version
-        id: version
-        shell: bash
-        run: |
-          git fetch --tags
-          YEAR_MONTH=$(date -u +'%Y.%m')
-          LAST_N=$(git tag -l "${YEAR_MONTH}.*" \
-            | sed "s/^${YEAR_MONTH}\.//" \
-            | grep -E '^[0-9]+$' \
-            | sort -n \
-            | tail -1)
-          N=$(( ${LAST_N:-0} + 1 ))
-          VERSION="${YEAR_MONTH}.${N}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Computed version: ${VERSION}"
-
-      # Create the tag on the release branch and push it so the GitHub Release
-      # is permanently associated with this exact commit.
-      - name: Create and push version tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "${{ steps.version.outputs.version }}"
-          git push origin "${{ steps.version.outputs.version }}"
-
-      - name: Download all platform artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true   # flatten into a single directory
-
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: ${{ steps.version.outputs.version }}
-          generate_release_notes: true   # auto-generate notes from commits/PRs
-          files: artifacts/*
-
+   push:
+      branches:
+         - release
+   workflow_dispatch:
 
 jobs:
    # ── Build job — runs in parallel on all three platforms ─────────────────────
    build:
       name: Build (${{ matrix.os }})
       runs-on: ${{ matrix.os }}
+      # Hard guard: only run if we are actually on the release branch or this is
+      # a manual dispatch.  This prevents the job from executing if the workflow
+      # file is somehow evaluated from the dev branch (e.g. while both branches
+      # still have slightly different versions of this file).
+      if: github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch'
       strategy:
          fail-fast: false # let all three platforms finish even if one fails
          matrix:
@@ -196,38 +80,56 @@ jobs:
       name: Publish Release
       needs: build
       runs-on: ubuntu-latest
-      # Don't publish anything on a manual workflow_dispatch run.
-      if: github.event_name != 'workflow_dispatch'
+      # Only publish on branch pushes; skip manual workflow_dispatch runs.
+      if: github.event_name == 'push'
       permissions:
-         contents: write # required to create releases and upload assets
+         contents: write # required to push tags and create releases
 
       steps:
+         - name: Checkout code (full history + tags)
+           uses: actions/checkout@v4
+           with:
+              fetch-depth: 0 # needed so we can list all existing tags
+
+         # Compute the next CalVer version for this month.
+         # - Fetch all remote tags.
+         # - List tags that match YYYY.MM.* for the current month.
+         # - Find the highest N; increment by 1 (default to 1 if none exist yet).
+         - name: Compute CalVer version
+           id: version
+           shell: bash
+           run: |
+              git fetch --tags
+              YEAR_MONTH=$(date -u +'%Y.%m')
+              LAST_N=$(git tag -l "${YEAR_MONTH}.*" \
+                | sed "s/^${YEAR_MONTH}\.//" \
+                | grep -E '^[0-9]+$' \
+                | sort -n \
+                | tail -1)
+              N=$(( ${LAST_N:-0} + 1 ))
+              VERSION="${YEAR_MONTH}.${N}"
+              echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+              echo "Computed version: ${VERSION}"
+
+         # Create the tag on the release branch and push it so the GitHub Release
+         # is permanently associated with this exact commit.
+         - name: Create and push version tag
+           run: |
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git tag "${{ steps.version.outputs.version }}"
+              git push origin "${{ steps.version.outputs.version }}"
+
          - name: Download all platform artifacts
            uses: actions/download-artifact@v4
            with:
               path: artifacts
               merge-multiple: true # flatten into a single directory
 
-         # Push to `release` branch (not a tag) → rolling "latest" pre-release.
-         # The existing `latest-release` release is deleted and recreated so the
-         # binaries always reflect the current state of the release branch.
-         - name: Publish rolling pre-release (release branch)
-           if: github.ref == 'refs/heads/release'
+         - name: Publish GitHub Release
            uses: softprops/action-gh-release@v2
            with:
-              tag_name: latest-release
-              name: Latest Release Build
-              prerelease: true
-              generate_release_notes: false
-              body: |
-                 Automated build from the `release` branch — commit ${{ github.sha }}.
-                 This is updated on every push to `release` and is not a versioned release.
-              files: artifacts/*
-
-         # Push of a version tag → proper versioned release.
-         - name: Publish versioned release (tag)
-           if: startsWith(github.ref, 'refs/tags/')
-           uses: softprops/action-gh-release@v2
-           with:
+              tag_name: ${{ steps.version.outputs.version }}
+              name: ${{ steps.version.outputs.version }}
               generate_release_notes: true # auto-generate notes from commits/PRs
               files: artifacts/*
