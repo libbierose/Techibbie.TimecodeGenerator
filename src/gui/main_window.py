@@ -309,8 +309,10 @@ def _apply_update(new_exe_path: str) -> None:
                 "}\n"
                 "\"[$(Get-Date -f 'HH:mm:ss')] Parent exited\" | Add-Content $log\n"
                 "try {\n"
-                # Write raw bytes to a new file — a freshly-written file has no Zone.Identifier
-                # ADS at all, so no unblocking is needed and the DLL-load error cannot occur.
+                # Delete the destination first so WriteAllBytes creates a brand-new file.
+                # Overwriting an existing file preserves NTFS alternate data streams (including
+                # Zone.Identifier) from the old file, which causes the DLL load error.
+                "    if (Test-Path -LiteralPath $dest) { [System.IO.File]::Delete($dest) }\n"
                 "    $bytes = [System.IO.File]::ReadAllBytes($src)\n"
                 "    [System.IO.File]::WriteAllBytes($dest, $bytes)\n"
                 "    Remove-Item -LiteralPath $src -Force -ErrorAction SilentlyContinue\n"
