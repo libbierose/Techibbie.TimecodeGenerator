@@ -8,6 +8,15 @@ Versions use CalVer: `YYYY.MM.N` (year, zero-padded month, release counter).
 
 <!-- Releases are prepended here automatically by CI after each merge to release. -->
 
+## 2026.04.17 -- 2026-04-20
+﻿## What's Changed
+
+## fix
+
+- updated the update script to use correct url for version download. please work!
+
+---
+
 ## 2026.04.16 -- 2026-04-20
 ﻿## What's Changed
 
