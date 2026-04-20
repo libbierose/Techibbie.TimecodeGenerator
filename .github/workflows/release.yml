@@ -28,14 +28,14 @@ jobs:
          matrix:
             include:
                - os: windows-latest
-                 dist_name: timecode.exe
-                 artifact: Timecode-Windows.exe
+                 dist_name: Techibbie.TimecodeGenerator.exe
+                 artifact: Techibbie.TimecodeGenerator-Windows.exe
                - os: ubuntu-latest
-                 dist_name: timecode
-                 artifact: Timecode-Linux
+                 dist_name: Techibbie.TimecodeGenerator
+                 artifact: Techibbie.TimecodeGenerator-Linux
                - os: macos-latest
-                 dist_name: timecode
-                 artifact: Timecode-macOS
+                 dist_name: Techibbie.TimecodeGenerator
+                 artifact: Techibbie.TimecodeGenerator-macOS
 
       steps:
          - name: Checkout code

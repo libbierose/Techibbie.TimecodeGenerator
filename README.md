@@ -1,8 +1,10 @@
-[![CI](https://github.com/libbierose/timecode/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/libbierose/timecode/actions/workflows/ci.yml)
+[![CI](https://github.com/libbierose/Techibbie.TimecodeGenerator/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/libbierose/Techibbie.TimecodeGenerator/actions/workflows/ci.yml)
 
-[![Build & Release](https://github.com/libbierose/timecode/actions/workflows/release.yml/badge.svg?branch=release)](https://github.com/libbierose/timecode/actions/workflows/release.yml)
+[![Build & Release](https://github.com/libbierose/Techibbie.TimecodeGenerator/actions/workflows/release.yml/badge.svg?branch=release)](https://github.com/libbierose/Techibbie.TimecodeGenerator/actions/workflows/release.yml)
 
-# Timecode Generator
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/G2G5IPEXX)
+
+# Techibbie Timecode Generator
 
 A cross-platform desktop application that generates **SMPTE Linear Timecode (LTC)** and displays a real-time timecode clock. Designed for film/video production workflows where a reliable, professional-grade timecode source is needed — including direct integration with **DaVinci Resolve** and other NLEs via audio output.
 
@@ -56,11 +58,11 @@ This application generates a fully spec-compliant LTC stream including:
 
 Pre-built single-file executables for Windows, Linux, and macOS are attached to every [GitHub Release](../../releases/latest).
 
-| Platform | File                                                                              |
-| -------- | --------------------------------------------------------------------------------- |
-| Windows  | `Timecode-Windows.exe` — double-click to run                                      |
-| Linux    | `Timecode-Linux` — `chmod +x Timecode-Linux && ./Timecode-Linux`                  |
-| macOS    | `Timecode-macOS` — right-click → Open (required the first time due to Gatekeeper) |
+| Platform | File                                                                                                                      |
+| -------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Windows  | `Techibbie.TimecodeGenerator-Windows.exe` — double-click to run                                                           |
+| Linux    | `Techibbie.TimecodeGenerator-Linux` — `chmod +x Techibbie.TimecodeGenerator-Linux && ./Techibbie.TimecodeGenerator-Linux` |
+| macOS    | `Techibbie.TimecodeGenerator-macOS` — right-click → Open (required the first time due to Gatekeeper)                      |
 
 ---
 
@@ -68,8 +70,8 @@ Pre-built single-file executables for Windows, Linux, and macOS are attached to 
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/your-username/timecode.git
-cd timecode
+git clone https://github.com/your-username/Techibbie.TimecodeGenerator.git
+cd Techibbie.TimecodeGenerator
 
 # 2. Create and activate a virtual environment (recommended)
 python -m venv .venv
@@ -124,7 +126,7 @@ python src/main.py
 ## Project Structure
 
 ```
-timecode/
+Techibbie.TimecodeGenerator/
 ├── src/
 │   ├── main.py                    # Application entry point
 │   ├── gui/
@@ -218,7 +220,7 @@ pip install pyinstaller
 pyinstaller timecode.spec
 ```
 
-The output lands in `dist/timecode` (`dist/timecode.exe` on Windows).
+The output lands in `dist/Techibbie.TimecodeGenerator` (`dist/Techibbie.TimecodeGenerator.exe` on Windows).
 
 ---
 
