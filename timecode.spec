@@ -1,11 +1,11 @@
 # timecode.spec
-# PyInstaller build specification for the Timecode Generator application.
+# PyInstaller build specification for the Techibbie Timecode Generator application.
 # Produces a single-file executable for Windows, Linux, and macOS.
 #
 # Usage (from the project root):
 #   pyinstaller timecode.spec
 #
-# Output: dist/timecode  (dist/timecode.exe on Windows)
+# Output: dist/Techibbie.TimecodeGenerator  (dist/Techibbie.TimecodeGenerator.exe on Windows)
 
 from PyInstaller.utils.hooks import collect_data_files, collect_all
 
@@ -50,7 +50,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='timecode',
+    name='Techibbie.TimecodeGenerator',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

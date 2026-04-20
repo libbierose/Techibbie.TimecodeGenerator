@@ -10,9 +10,13 @@ from PyQt6.QtWidgets import (
     QPushButton, QSpinBox, QCheckBox, QMessageBox,
     QDialog, QFormLayout, QDialogButtonBox, QSizePolicy, QFileDialog,
 )
-from PyQt6.QtCore import QTimer, Qt, QSize, QSettings
+from PyQt6.QtCore import QTimer, Qt, QSize, QSettings, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QFontMetrics
 import qtawesome as qta
+import json
+import urllib.request
+import urllib.error
+import webbrowser
 
 from timecode.timecode_handler import TimecodeHandler
 from audio.audio_handler import AudioHandler
@@ -22,6 +26,10 @@ TC_GREEN = "#4ADE80"
 TC_FONT  = "Consolas"
 TC_SIZE  = 80          # pt – digit labels
 DARK_BG  = "#191919"
+
+APP_VERSION = "dev"
+KOFI_URL    = "https://ko-fi.com/G2G5IPEXX"
+GITHUB_REPO = "libbierose/Techibbie.TimecodeGenerator"
 
 STYLE = f"""
 QMainWindow, QWidget {{ background: {DARK_BG}; color: #cccccc; }}
@@ -117,6 +125,92 @@ def _divider() -> QWidget:
     return w
 
 
+# ── Update checker ────────────────────────────────────────────────────────────
+
+class _UpdateCheckThread(QThread):
+    """Background thread that checks the GitHub API for a newer release."""
+
+    update_available = pyqtSignal(str, str)   # (latest_tag, release_html_url)
+
+    def run(self):
+        try:
+            api_url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+            req = urllib.request.Request(
+                api_url,
+                headers={"User-Agent": "Techibbie-TimecodeGenerator-UpdateCheck"},
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:  # nosec B310
+                data = json.loads(resp.read().decode())
+            tag = data.get("tag_name", "").lstrip("v")
+            html_url = data.get(
+                "html_url",
+                f"https://github.com/{GITHUB_REPO}/releases/latest",
+            )
+            if tag and tag != APP_VERSION and APP_VERSION != "dev":
+                self.update_available.emit(tag, html_url)
+        except Exception:
+            pass   # silently ignore network / parse errors
+
+
+# ── About dialog ──────────────────────────────────────────────────────────────
+
+class AboutDialog(QDialog):
+    """Modal dialog showing app info, version, and Ko-fi support link."""
+
+    def __init__(self, parent: "TimecodeGeneratorWindow"):
+        super().__init__(parent)
+        self.setWindowTitle("About")
+        self.setMinimumWidth(400)
+        self.setModal(True)
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(14)
+        layout.setContentsMargins(32, 28, 32, 24)
+
+        title = QLabel("Techibbie Timecode Generator")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("font-size: 15pt; font-weight: 600; color: #cccccc;")
+        layout.addWidget(title)
+
+        ver_lbl = QLabel(f"Version {APP_VERSION}")
+        ver_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ver_lbl.setStyleSheet("color: #606060; font-size: 10pt;")
+        layout.addWidget(ver_lbl)
+
+        layout.addWidget(_divider())
+
+        desc = QLabel(
+            "A cross-platform SMPTE Linear Timecode (LTC) generator\n"
+            "for film and video production workflows."
+        )
+        desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc.setStyleSheet("color: #aaaaaa; font-size: 10pt;")
+        desc.setWordWrap(True)
+        layout.addWidget(desc)
+
+        layout.addWidget(_divider())
+
+        kofi_btn = QPushButton("  Support on Ko-fi  ☕")
+        kofi_btn.setStyleSheet(
+            "QPushButton { background: #FF5E5B; border: none; border-radius: 6px;"
+            " color: white; font-size: 11pt; font-weight: 600; padding: 10px 20px; }"
+            "QPushButton:hover { background: #ff7674; }"
+            "QPushButton:pressed { background: #e54b48; }"
+        )
+        kofi_btn.clicked.connect(lambda: webbrowser.open(KOFI_URL))
+        layout.addWidget(kofi_btn)
+
+        gh_btn = QPushButton("View on GitHub")
+        gh_btn.clicked.connect(
+            lambda: webbrowser.open(f"https://github.com/{GITHUB_REPO}")
+        )
+        layout.addWidget(gh_btn)
+
+        close_btns = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        close_btns.rejected.connect(self.reject)
+        layout.addWidget(close_btns)
+
+
 # ── Settings dialog ───────────────────────────────────────────────────────────
 
 class SettingsDialog(QDialog):
@@ -172,13 +266,15 @@ class SettingsDialog(QDialog):
         layout.addWidget(_divider())
 
         # Checkboxes
-        self.ltc_check   = QCheckBox("Enable LTC output  (for DaVinci Resolve / NLEs)")
-        self.audio_check = QCheckBox("Enable audio  (click tones when LTC is off)")
-        self.utc_check   = QCheckBox("Use real-time UTC clock instead of elapsed time")
+        self.ltc_check    = QCheckBox("Enable LTC output  (for DaVinci Resolve / NLEs)")
+        self.audio_check  = QCheckBox("Enable audio  (click tones when LTC is off)")
+        self.utc_check    = QCheckBox("Use real-time UTC clock instead of elapsed time")
+        self.update_check = QCheckBox("Check for updates on startup")
         self.ltc_check.setChecked(parent.audio_handler.ltc_mode)
         self.audio_check.setChecked(parent.enable_audio)
         self.utc_check.setChecked(parent.use_utc_time)
-        for cb in (self.ltc_check, self.audio_check, self.utc_check):
+        self.update_check.setChecked(parent.check_for_updates)
+        for cb in (self.ltc_check, self.audio_check, self.utc_check, self.update_check):
             layout.addWidget(cb)
 
         layout.addWidget(_divider())
@@ -217,7 +313,7 @@ class TimecodeGeneratorWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Timecode Generator")
+        self.setWindowTitle("Techibbie Timecode Generator")
         self.resize(1100, 420)
         self.setMinimumSize(860, 340)
 
@@ -229,8 +325,10 @@ class TimecodeGeneratorWindow(QMainWindow):
         self.last_frame            = -1
         self.enable_audio          = True
         self.use_utc_time          = False
+        self.check_for_updates     = True
         self.selected_audio_device = None
         self._audio_devices: list  = []
+        self._update_thread: _UpdateCheckThread | None = None
 
         self.setStyleSheet(STYLE)
         self._build_ui()
@@ -241,6 +339,7 @@ class TimecodeGeneratorWindow(QMainWindow):
 
         self._refresh_devices()
         self._load_settings()
+        self._start_update_check()
 
     def _build_ui(self):
         root_widget = QWidget()
@@ -367,6 +466,10 @@ class TimecodeGeneratorWindow(QMainWindow):
         self.settings_btn.clicked.connect(self.on_settings_clicked)
         tb.addWidget(self.settings_btn)
 
+        self.about_btn = _icon_btn("fa6s.circle-info", "About")
+        self.about_btn.clicked.connect(self.on_about_clicked)
+        tb.addWidget(self.about_btn)
+
         root.addLayout(tb)
 
         # These widgets are hidden in the main UI — settings are now managed
@@ -402,17 +505,18 @@ class TimecodeGeneratorWindow(QMainWindow):
     # ── Persist settings ──────────────────────────────────────────────────────
 
     def _save_settings(self):
-        s = QSettings("TimecodeGenerator", "TimecodeGenerator")
-        s.setValue("geometry",     self.saveGeometry())
-        s.setValue("fps",          self.timecode_handler.fps)
-        s.setValue("ltc_mode",     self.audio_handler.ltc_mode)
-        s.setValue("enable_audio", self.enable_audio)
-        s.setValue("use_utc_time", self.use_utc_time)
+        s = QSettings("Techibbie", "TimecodeGenerator")
+        s.setValue("geometry",          self.saveGeometry())
+        s.setValue("fps",               self.timecode_handler.fps)
+        s.setValue("ltc_mode",          self.audio_handler.ltc_mode)
+        s.setValue("enable_audio",      self.enable_audio)
+        s.setValue("use_utc_time",      self.use_utc_time)
+        s.setValue("check_for_updates", self.check_for_updates)
         if self.selected_audio_device is not None:
             s.setValue("audio_device", self.selected_audio_device)
 
     def _load_settings(self):
-        s = QSettings("TimecodeGenerator", "TimecodeGenerator")
+        s = QSettings("Techibbie", "TimecodeGenerator")
         geom = s.value("geometry")
         if geom:
             self.restoreGeometry(geom)
@@ -429,8 +533,9 @@ class TimecodeGeneratorWindow(QMainWindow):
             self.ltc_btn, "fa6s.circle-dot",
             color=_ICON_COLOR_ACTIVE if ltc else _ICON_COLOR,
         )
-        self.enable_audio = s.value("enable_audio", True, type=bool)
-        self.use_utc_time = s.value("use_utc_time", False, type=bool)
+        self.enable_audio      = s.value("enable_audio",      True,  type=bool)
+        self.use_utc_time      = s.value("use_utc_time",      False, type=bool)
+        self.check_for_updates = s.value("check_for_updates", True,  type=bool)
         self._refresh_status()
 
     # ── Status helper ─────────────────────────────────────────────────────────
@@ -539,8 +644,9 @@ class TimecodeGeneratorWindow(QMainWindow):
                 else:
                     self.audio_handler.stop_ltc_stream()
 
-        self.enable_audio = dlg.audio_check.isChecked()
-        self.use_utc_time = dlg.utc_check.isChecked()
+        self.enable_audio      = dlg.audio_check.isChecked()
+        self.use_utc_time      = dlg.utc_check.isChecked()
+        self.check_for_updates = dlg.update_check.isChecked()
         if self.use_utc_time:
             self.start_time = None
         self._save_settings()
@@ -706,12 +812,43 @@ class TimecodeGeneratorWindow(QMainWindow):
     def show_obs_help(self):
         pass
 
+    # ── About / update ────────────────────────────────────────────────────────
+
+    def on_about_clicked(self):
+        AboutDialog(self).exec()
+
+    def _start_update_check(self):
+        if not self.check_for_updates:
+            return
+        self._update_thread = _UpdateCheckThread(self)
+        self._update_thread.update_available.connect(self._on_update_available)
+        self._update_thread.start()
+
+    def _on_update_available(self, tag: str, url: str):
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Update Available")
+        msg.setText(
+            "A new version of Techibbie Timecode Generator is available.\n\n"
+            f"Installed:  {APP_VERSION}\n"
+            f"Latest:       {tag}"
+        )
+        msg.setInformativeText("Open the releases page to download the update?")
+        msg.setStandardButtons(
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        msg.setDefaultButton(QMessageBox.StandardButton.Yes)
+        if msg.exec() == QMessageBox.StandardButton.Yes:
+            webbrowser.open(url)
+
     # ── Close ─────────────────────────────────────────────────────────────────
 
     def closeEvent(self, event):
         self._save_settings()
         self.on_stop_clicked()
         self.audio_handler.shutdown()
+        if self._update_thread is not None and self._update_thread.isRunning():
+            self._update_thread.quit()
+            self._update_thread.wait(1000)
         event.accept()
 
 

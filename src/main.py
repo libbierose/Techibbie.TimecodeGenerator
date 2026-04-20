@@ -1,5 +1,5 @@
 """
-Timecode Generator Application
+Techibbie Timecode Generator
 Main entry point for the application.
 """
 
