@@ -14,6 +14,8 @@ on:
          - release
    workflow_dispatch:
 
+env:
+   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
    # ---------------------------------------------------------------------------
    # Version job - computes CalVer before building so binaries embed it
@@ -91,15 +93,12 @@ jobs:
               pip install -r requirements.txt pyinstaller
 
          - name: Inject version into source
+           env:
+              APP_VER: ${{ needs.version.outputs.version }}
            shell: bash
            run: |
-              VERSION="${{ needs.version.outputs.version }}"
-              python - <<EOF
-              import re, pathlib
-              f = pathlib.Path("src/gui/main_window.py")
-              f.write_text(re.sub(r'^APP_VERSION = "dev"', f'APP_VERSION = "{VERSION}"', f.read_text(), count=1, flags=re.MULTILINE))
-              EOF
-              echo "APP_VERSION set to ${VERSION}"
+              python -c "import re,pathlib,os; v=os.environ['APP_VER']; f=pathlib.Path('src/gui/main_window.py'); f.write_text(re.sub(r'APP_VERSION = \"dev\"', 'APP_VERSION = \"'+v+'\"', f.read_text(), count=1))"
+              echo "APP_VERSION set to ${APP_VER}"
 
          - name: Build single-file executable
            run: pyinstaller timecode.spec

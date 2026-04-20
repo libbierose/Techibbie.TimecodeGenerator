@@ -645,15 +645,20 @@ class TimecodeGeneratorWindow(QMainWindow):
             color=_ICON_COLOR_ACTIVE if ltc else _ICON_COLOR,
         )
         if self.is_running and self.enable_audio:
-            if ltc:
-                self.audio_handler.start_ltc_stream(
-                    0, 0, 0, 0,
-                    self.timecode_handler.fps,
-                    self.timecode_handler.is_drop_frame(),
-                    self.selected_audio_device,
-                )
-            else:
-                self.audio_handler.stop_ltc_stream()
+                if ltc:
+                    now = datetime.utcnow() if self.use_utc_time else None
+                    hh = now.hour   if now else 0
+                    mm = now.minute if now else 0
+                    ss = now.second if now else 0
+                    ff = int(now.microsecond / 1_000_000 * self.timecode_handler.fps) if now else 0
+                    self.audio_handler.start_ltc_stream(
+                        hh, mm, ss, ff,
+                        self.timecode_handler.fps,
+                        self.timecode_handler.is_drop_frame(),
+                        self.selected_audio_device,
+                    )
+                else:
+                    self.audio_handler.stop_ltc_stream()
         self._refresh_status()
 
     def on_skip_back(self):
@@ -687,8 +692,13 @@ class TimecodeGeneratorWindow(QMainWindow):
             )
             if self.is_running and self.enable_audio:
                 if ltc:
+                    now = datetime.utcnow() if self.use_utc_time else None
+                    hh = now.hour   if now else 0
+                    mm = now.minute if now else 0
+                    ss = now.second if now else 0
+                    ff = int(now.microsecond / 1_000_000 * self.timecode_handler.fps) if now else 0
                     self.audio_handler.start_ltc_stream(
-                        0, 0, 0, 0, fps,
+                        hh, mm, ss, ff, fps,
                         self.timecode_handler.is_drop_frame(),
                         self.selected_audio_device,
                     )
@@ -718,8 +728,13 @@ class TimecodeGeneratorWindow(QMainWindow):
             self.fps_combo.setEnabled(False)
             self.device_combo.setEnabled(False)
             if self.enable_audio and self.audio_handler.ltc_mode:
+                now = datetime.utcnow() if self.use_utc_time else None
+                hh = now.hour   if now else 0
+                mm = now.minute if now else 0
+                ss = now.second if now else 0
+                ff = int(now.microsecond / 1_000_000 * self.timecode_handler.fps) if now else 0
                 self.audio_handler.start_ltc_stream(
-                    0, 0, 0, 0,
+                    hh, mm, ss, ff,
                     self.timecode_handler.fps,
                     self.timecode_handler.is_drop_frame(),
                     self.selected_audio_device,
