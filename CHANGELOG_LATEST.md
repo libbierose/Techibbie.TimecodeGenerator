@@ -1,5 +1,5 @@
 ﻿## What's Changed
 
-## fix
+## change
 
-- updated the update script to use correct url for version download. please work!
+user has to go to get hub and download updates, auro updater will be coming soon!
