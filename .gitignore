@@ -49,6 +49,10 @@ desktop.ini
 *.log
 *.tmp
 
+# ── PyInstaller ───────────────────────────────────────────────────────────────
+# dist/ and build/ are already covered above; only add the backup spec file.
+*.spec.bak
+
 # ── Qt / PyQt ─────────────────────────────────────────────────────────────────
 # QSettings on Windows is stored in the registry, not a file.
 # Any .ini fallback files:

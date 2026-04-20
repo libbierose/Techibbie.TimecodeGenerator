@@ -48,7 +48,19 @@ This application generates a fully spec-compliant LTC stream including:
 
 ---
 
-## Installation
+## Download (pre-built binaries)
+
+Pre-built single-file executables for Windows, Linux, and macOS are attached to every [GitHub Release](../../releases/latest).
+
+| Platform | File                                                                              |
+| -------- | --------------------------------------------------------------------------------- |
+| Windows  | `Timecode-Windows.exe` — double-click to run                                      |
+| Linux    | `Timecode-Linux` — `chmod +x Timecode-Linux && ./Timecode-Linux`                  |
+| macOS    | `Timecode-macOS` — right-click → Open (required the first time due to Gatekeeper) |
+
+---
+
+## Installation (from source)
 
 ```bash
 # 1. Clone the repo
@@ -127,9 +139,37 @@ timecode/
 │   ├── test_ltc.py                # Verify LTC bit patterns for known timecodes
 │   ├── test_ltc_decode.py         # Round-trip encode→decode test at 24 & 30fps
 │   └── test_ltc_detailed.py       # Full BCD + sync-word + waveform verification
+├── timecode.spec                  # PyInstaller build spec (single-file exe)
+├── .github/
+│   └── workflows/
+│       └── release.yml            # CI/CD: build & publish GitHub Releases
 ├── requirements.txt
 ├── .gitignore
 └── README.md
+```
+
+---
+
+## Building a standalone executable
+
+Requires [PyInstaller](https://pyinstaller.org):
+
+```bash
+pip install pyinstaller
+pyinstaller timecode.spec
+```
+
+The output lands in `dist/timecode` (`dist/timecode.exe` on Windows).
+
+---
+
+## Creating a release
+
+Pushing a version tag triggers the GitHub Actions workflow, which builds executables on all three platforms and publishes them as a GitHub Release automatically:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 ---

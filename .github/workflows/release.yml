@@ -1,0 +1,87 @@
+name: Build & Release
+
+# Trigger on version tags (e.g. v1.0.0) or manually from the Actions tab.
+on:
+   push:
+      tags:
+         - "v*.*.*"
+   workflow_dispatch:
+
+jobs:
+   # ── Build job — runs in parallel on all three platforms ───────────────────
+   build:
+      name: Build (${{ matrix.os }})
+      runs-on: ${{ matrix.os }}
+      strategy:
+         fail-fast: false # let all three platforms finish even if one fails
+         matrix:
+            include:
+               - os: windows-latest
+                 dist_name: timecode.exe
+                 artifact: Timecode-Windows.exe
+               - os: ubuntu-latest
+                 dist_name: timecode
+                 artifact: Timecode-Linux
+               - os: macos-latest
+                 dist_name: timecode
+                 artifact: Timecode-macOS
+
+      steps:
+         - name: Checkout code
+           uses: actions/checkout@v4
+
+         - name: Set up Python 3.12
+           uses: actions/setup-python@v5
+           with:
+              python-version: "3.12"
+              cache: pip
+
+         # PortAudio is bundled inside the sounddevice wheel on Windows and macOS.
+         # On Linux it must be installed from the system package manager so that
+         # PyInstaller can find and bundle the shared library.
+         - name: Install PortAudio (Linux only)
+           if: runner.os == 'Linux'
+           run: sudo apt-get update && sudo apt-get install -y libportaudio2 portaudio19-dev
+
+         - name: Install Python dependencies
+           run: |
+              python -m pip install --upgrade pip
+              pip install -r requirements.txt pyinstaller
+
+         - name: Build single-file executable
+           run: pyinstaller timecode.spec
+
+         # Rename the output to include the platform name so all three files can
+         # coexist in the same GitHub Release without overwriting each other.
+         - name: Rename binary
+           shell: bash
+           run: mv dist/${{ matrix.dist_name }} dist/${{ matrix.artifact }}
+
+         - name: Upload build artifact
+           uses: actions/upload-artifact@v4
+           with:
+              name: ${{ matrix.artifact }}
+              path: dist/${{ matrix.artifact }}
+
+   # ── Release job — runs after all builds succeed ───────────────────────────
+   release:
+      name: Create GitHub Release
+      needs: build
+      runs-on: ubuntu-latest
+      # Only publish a release when triggered by a tag push, not a manual run.
+      if: startsWith(github.ref, 'refs/tags/')
+      permissions:
+         contents: write # required to create releases and upload assets
+
+      steps:
+         - name: Download all platform artifacts
+           uses: actions/download-artifact@v4
+           with:
+              path: artifacts
+              merge-multiple: true # flatten into a single directory
+
+         - name: Create release and attach binaries
+           uses: softprops/action-gh-release@v2
+           with:
+              generate_release_notes: true # auto-generate notes from commits/PRs
+              files: artifacts/*
