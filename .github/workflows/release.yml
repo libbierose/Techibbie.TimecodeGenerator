@@ -99,11 +99,12 @@ jobs:
         run: |
           git fetch --tags
           YEAR_MONTH=$(date -u +'%Y.%m')
-          LAST_N=$(git tag -l "${YEAR_MONTH}.*" \
+          # grep exits 1 when there are no existing tags (first release).
+          # Capture separately with || true so the script does not abort.
+          EXISTING=$(git tag -l "${YEAR_MONTH}.*" \
             | sed "s/^${YEAR_MONTH}\.//" \
-            | grep -E '^[0-9]+$' \
-            | sort -n \
-            | tail -1)
+            | grep -E '^[0-9]+$' || true)
+          LAST_N=$(echo "$EXISTING" | sort -n | tail -1)
           N=$(( ${LAST_N:-0} + 1 ))
           VERSION="${YEAR_MONTH}.${N}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
