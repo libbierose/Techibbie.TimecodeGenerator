@@ -8,6 +8,19 @@ Versions use CalVer: `YYYY.MM.N` (year, zero-padded month, release counter).
 
 <!-- Releases are prepended here automatically by CI after each merge to release. -->
 
+## 2026.04.3 -- 2026-04-20
+﻿## What''s Changed
+
+## Fix
+
+- Fixed Use real-time so time actually starts at the real time instead of 00:00:00:00
+
+## Added
+
+- Check for update
+
+---
+
 ## 2026.04.2 -- 2026-04-20
 ﻿## What''s Changed
 
