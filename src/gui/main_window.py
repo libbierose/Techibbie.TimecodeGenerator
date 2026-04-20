@@ -2,13 +2,18 @@
 Main GUI window – dark full-screen timecode display.
 """
 
+import os
 import sys
+import tempfile
+import subprocess
+import shutil
 from datetime import datetime, timedelta
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QPushButton, QSpinBox, QCheckBox, QMessageBox,
     QDialog, QFormLayout, QDialogButtonBox, QSizePolicy, QFileDialog,
+    QProgressDialog,
 )
 from PyQt6.QtCore import QTimer, Qt, QSize, QSettings, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QFontMetrics
@@ -130,7 +135,7 @@ def _divider() -> QWidget:
 class _UpdateCheckThread(QThread):
     """Background thread that checks the GitHub API for a newer release."""
 
-    update_available = pyqtSignal(str, str)   # (latest_tag, release_html_url)
+    update_available = pyqtSignal(str, str, str)  # (tag, html_url, asset_download_url)
     no_update        = pyqtSignal()           # emitted when already up to date
     check_failed     = pyqtSignal(str)        # emitted on network/parse error (message)
 
@@ -152,8 +157,20 @@ class _UpdateCheckThread(QThread):
                 "html_url",
                 f"https://github.com/{GITHUB_REPO}/releases/latest",
             )
+            # Find the platform-specific binary asset
+            if sys.platform == "win32":
+                asset_suffix = "-windows.exe"
+            elif sys.platform == "darwin":
+                asset_suffix = "-macos"
+            else:
+                asset_suffix = "-linux"
+            asset_url = ""
+            for asset in data.get("assets", []):
+                if asset.get("name", "").endswith(asset_suffix):
+                    asset_url = asset.get("browser_download_url", "")
+                    break
             if tag and tag != APP_VERSION and APP_VERSION != "dev":
-                self.update_available.emit(tag, html_url)
+                self.update_available.emit(tag, html_url, asset_url)
             elif not self.silent:
                 self.no_update.emit()
         except urllib.error.HTTPError as e:
@@ -167,6 +184,132 @@ class _UpdateCheckThread(QThread):
         except Exception:
             if not self.silent:
                 self.check_failed.emit("Could not reach GitHub. Check your internet connection and try again.")
+
+
+# ── Asset downloader ──────────────────────────────────────────────────────────
+
+class _DownloadThread(QThread):
+    """Background thread that streams a release asset to disk."""
+
+    progress = pyqtSignal(int)   # 0-100
+    finished = pyqtSignal(str)   # path to downloaded file
+    failed   = pyqtSignal(str)   # error message
+
+    def __init__(self, url: str, dest: str, parent=None):
+        super().__init__(parent)
+        self.url  = url
+        self.dest = dest
+        self._cancelled = False
+
+    def cancel(self):
+        self._cancelled = True
+
+    def run(self):
+        try:
+            req = urllib.request.Request(
+                self.url,
+                headers={"User-Agent": "Techibbie-TimecodeGenerator-Updater"},
+            )
+            with urllib.request.urlopen(req, timeout=120) as resp:  # nosec B310
+                total      = int(resp.headers.get("Content-Length", 0))
+                downloaded = 0
+                with open(self.dest, "wb") as f:
+                    while True:
+                        if self._cancelled:
+                            return
+                        chunk = resp.read(65536)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if total:
+                            self.progress.emit(int(downloaded * 100 / total))
+            if not self._cancelled:
+                self.progress.emit(100)
+                self.finished.emit(self.dest)
+        except Exception as exc:
+            if not self._cancelled:
+                self.failed.emit(str(exc))
+
+
+# ── Auto-update helpers ───────────────────────────────────────────────────────
+
+def _start_update_download(parent_widget, asset_url: str, tag: str) -> None:
+    """Download *asset_url* and apply the update, showing a progress dialog."""
+
+    suffix   = ".exe" if sys.platform == "win32" else ""
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=suffix, prefix="TcgUpdate_")
+    os.close(tmp_fd)
+
+    dlg = QProgressDialog(
+        f"Downloading version {tag}…", "Cancel", 0, 100, parent_widget
+    )
+    dlg.setWindowTitle("Downloading Update")
+    dlg.setWindowModality(Qt.WindowModality.WindowModal)
+    dlg.setMinimumDuration(0)
+    dlg.setValue(0)
+
+    thread = _DownloadThread(asset_url, tmp_path, parent_widget)
+    thread.progress.connect(dlg.setValue)
+
+    def _on_finished(path: str):
+        dlg.close()
+        QMessageBox.information(
+            parent_widget,
+            "Update Ready",
+            "The update has been downloaded.\n\n"
+            "The application will now restart to apply it.",
+        )
+        _apply_update(path)
+
+    def _on_failed(error: str):
+        dlg.close()
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        QMessageBox.warning(
+            parent_widget,
+            "Download Failed",
+            f"Could not download the update:\n{error}",
+        )
+
+    thread.finished.connect(_on_finished)
+    thread.failed.connect(_on_failed)
+    dlg.canceled.connect(thread.cancel)
+    thread.finished.connect(thread.deleteLater)
+    thread.start()
+    parent_widget._dl_thread = thread   # keep alive
+
+
+def _apply_update(new_exe_path: str) -> None:
+    """Replace the running executable with the downloaded one and relaunch."""
+    current_exe = sys.executable
+
+    if sys.platform == "win32":
+        # Windows cannot replace a running executable — delegate to a batch script
+        bat_fd, bat_path = tempfile.mkstemp(suffix=".bat", prefix="TcgSwap_")
+        with os.fdopen(bat_fd, "w") as bat:
+            bat.write(
+                "@echo off\n"
+                "timeout /t 2 /nobreak > NUL\n"
+                f'move /y "{new_exe_path}" "{current_exe}"\n'
+                f'start "" "{current_exe}"\n'
+                'del "%~f0"\n'
+            )
+        subprocess.Popen(  # noqa: S603
+            ["cmd", "/c", bat_path],
+            creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+            close_fds=True,
+        )
+    else:
+        # Linux/macOS: safe to replace an open file (inode swap)
+        shutil.move(new_exe_path, current_exe)
+        os.chmod(current_exe, 0o755)
+        subprocess.Popen([current_exe])  # noqa: S603
+
+    from PyQt6.QtWidgets import QApplication
+    QApplication.quit()
 
 
 # ── About dialog ──────────────────────────────────────────────────────────────
@@ -242,7 +385,7 @@ class AboutDialog(QDialog):
         thread.start()
         self._thread = thread   # keep reference alive
 
-    def _on_update_found(self, tag: str, url: str):
+    def _on_update_found(self, tag: str, url: str, asset_url: str):
         self._update_btn.setText("Check for Updates")
         self._update_btn.setEnabled(True)
         msg = QMessageBox(self)
@@ -252,12 +395,21 @@ class AboutDialog(QDialog):
             f"Installed:  {APP_VERSION}\n"
             f"Latest:       {tag}"
         )
-        msg.setInformativeText("Open the releases page to download the update?")
-        msg.setStandardButtons(
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        if msg.exec() == QMessageBox.StandardButton.Yes:
-            webbrowser.open(url)
+        frozen = getattr(sys, "frozen", False)
+        if frozen and asset_url:
+            msg.setInformativeText("Would you like to update now? The app will restart.")
+            update_btn = msg.addButton("Update Now", QMessageBox.ButtonRole.AcceptRole)
+            msg.addButton("Later", QMessageBox.ButtonRole.RejectRole)
+            msg.exec()
+            if msg.clickedButton() is update_btn:
+                _start_update_download(self, asset_url, tag)
+        else:
+            msg.setInformativeText("Open the releases page to download the update?")
+            msg.setStandardButtons(
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if msg.exec() == QMessageBox.StandardButton.Yes:
+                webbrowser.open(url)
 
     def _on_no_update(self):
         self._update_btn.setText("Check for Updates")
@@ -898,7 +1050,7 @@ class TimecodeGeneratorWindow(QMainWindow):
         self._update_thread.update_available.connect(self._on_update_available)
         self._update_thread.start()
 
-    def _on_update_available(self, tag: str, url: str):
+    def _on_update_available(self, tag: str, url: str, asset_url: str):
         msg = QMessageBox(self)
         msg.setWindowTitle("Update Available")
         msg.setText(
@@ -906,13 +1058,22 @@ class TimecodeGeneratorWindow(QMainWindow):
             f"Installed:  {APP_VERSION}\n"
             f"Latest:       {tag}"
         )
-        msg.setInformativeText("Open the releases page to download the update?")
-        msg.setStandardButtons(
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        msg.setDefaultButton(QMessageBox.StandardButton.Yes)
-        if msg.exec() == QMessageBox.StandardButton.Yes:
-            webbrowser.open(url)
+        frozen = getattr(sys, "frozen", False)
+        if frozen and asset_url:
+            msg.setInformativeText("Would you like to update now? The app will restart.")
+            update_btn = msg.addButton("Update Now", QMessageBox.ButtonRole.AcceptRole)
+            msg.addButton("Later", QMessageBox.ButtonRole.RejectRole)
+            msg.exec()
+            if msg.clickedButton() is update_btn:
+                _start_update_download(self, asset_url, tag)
+        else:
+            msg.setInformativeText("Open the releases page to download the update?")
+            msg.setStandardButtons(
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            msg.setDefaultButton(QMessageBox.StandardButton.Yes)
+            if msg.exec() == QMessageBox.StandardButton.Yes:
+                webbrowser.open(url)
 
     # ── Close ─────────────────────────────────────────────────────────────────
 
