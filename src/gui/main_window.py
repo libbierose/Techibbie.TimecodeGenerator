@@ -254,12 +254,6 @@ def _start_update_download(parent_widget, asset_url: str, tag: str) -> None:
 
     def _on_finished(path: str):
         dlg.close()
-        QMessageBox.information(
-            parent_widget,
-            "Update Ready",
-            "The update has been downloaded.\n\n"
-            "The application will now restart to apply it.",
-        )
         _apply_update(path)
 
     def _on_failed(error: str):
@@ -284,7 +278,14 @@ def _start_update_download(parent_widget, asset_url: str, tag: str) -> None:
 
 def _apply_update(new_exe_path: str) -> None:
     """Replace the running executable with the downloaded one and relaunch."""
-    current_exe = sys.executable
+    import pathlib
+
+    if getattr(sys, "frozen", False):
+        current_exe = sys.executable
+    else:
+        # Running from source — place the new exe in Downloads so it can be tested
+        downloads = pathlib.Path.home() / "Downloads"
+        current_exe = str(downloads / pathlib.Path(new_exe_path).name)
 
     if sys.platform == "win32":
         # Windows cannot replace a running executable — delegate to a batch script
@@ -396,7 +397,7 @@ class AboutDialog(QDialog):
             f"Latest:       {tag}"
         )
         frozen = getattr(sys, "frozen", False)
-        if frozen and asset_url:
+        if asset_url:
             msg.setInformativeText("Would you like to update now? The app will restart.")
             update_btn = msg.addButton("Update Now", QMessageBox.ButtonRole.AcceptRole)
             msg.addButton("Later", QMessageBox.ButtonRole.RejectRole)
@@ -1059,7 +1060,7 @@ class TimecodeGeneratorWindow(QMainWindow):
             f"Latest:       {tag}"
         )
         frozen = getattr(sys, "frozen", False)
-        if frozen and asset_url:
+        if asset_url:
             msg.setInformativeText("Would you like to update now? The app will restart.")
             update_btn = msg.addButton("Update Now", QMessageBox.ButtonRole.AcceptRole)
             msg.addButton("Later", QMessageBox.ButtonRole.RejectRole)
