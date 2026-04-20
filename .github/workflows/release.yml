@@ -19,6 +19,11 @@ jobs:
   build:
     name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    # Hard guard: only run if we are actually on the release branch or this is
+    # a manual dispatch.  This prevents the job from executing if the workflow
+    # file is somehow evaluated from the dev branch (e.g. while both branches
+    # still have slightly different versions of this file).
+    if: github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false   # let all three platforms finish even if one fails
       matrix:
