@@ -8,6 +8,15 @@ Versions use CalVer: `YYYY.MM.N` (year, zero-padded month, release counter).
 
 <!-- Releases are prepended here automatically by CI after each merge to release. -->
 
+## 2026.04.5 -- 2026-04-20
+﻿## What''s Changed
+
+## Update
+
+- Change updater to download the latest version instead of redirecting to github releases
+
+---
+
 ## 2026.04.4 -- 2026-04-20
 ﻿## What''s Changed
 
