@@ -9,168 +9,168 @@
 #   YYYY = four-digit year, MM = zero-padded month, N = 1-based counter that
 #   resets to 1 each calendar month (e.g. 2026.04.1, 2026.04.2, 2026.05.1 ...).
 on:
-  push:
-    branches:
-      - release
-  workflow_dispatch:
+   push:
+      branches:
+         - release
+   workflow_dispatch:
 
 jobs:
-  # ---------------------------------------------------------------------------
-  # Build job - runs in parallel on all three platforms
-  # ---------------------------------------------------------------------------
-  build:
-    name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    # Hard guard: skip entirely if this runs on the wrong branch (e.g. dev).
-    if: github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            dist_name: timecode.exe
-            artifact: Timecode-Windows.exe
-          - os: ubuntu-latest
-            dist_name: timecode
-            artifact: Timecode-Linux
-          - os: macos-latest
-            dist_name: timecode
-            artifact: Timecode-macOS
+   # ---------------------------------------------------------------------------
+   # Build job - runs in parallel on all three platforms
+   # ---------------------------------------------------------------------------
+   build:
+      name: Build (${{ matrix.os }})
+      runs-on: ${{ matrix.os }}
+      # Hard guard: skip entirely if this runs on the wrong branch (e.g. dev).
+      if: github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch'
+      strategy:
+         fail-fast: false
+         matrix:
+            include:
+               - os: windows-latest
+                 dist_name: timecode.exe
+                 artifact: Timecode-Windows.exe
+               - os: ubuntu-latest
+                 dist_name: timecode
+                 artifact: Timecode-Linux
+               - os: macos-latest
+                 dist_name: timecode
+                 artifact: Timecode-macOS
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      steps:
+         - name: Checkout code
+           uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: pip
+         - name: Set up Python 3.12
+           uses: actions/setup-python@v5
+           with:
+              python-version: "3.12"
+              cache: pip
 
-      # PortAudio is bundled inside the sounddevice wheel on Windows and macOS.
-      # On Linux it must be installed from the system package manager so that
-      # PyInstaller can find and bundle the shared library.
-      - name: Install PortAudio (Linux only)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libportaudio2 portaudio19-dev
+         # PortAudio is bundled inside the sounddevice wheel on Windows and macOS.
+         # On Linux it must be installed from the system package manager so that
+         # PyInstaller can find and bundle the shared library.
+         - name: Install PortAudio (Linux only)
+           if: runner.os == 'Linux'
+           run: sudo apt-get update && sudo apt-get install -y libportaudio2 portaudio19-dev
 
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller
+         - name: Install Python dependencies
+           run: |
+              python -m pip install --upgrade pip
+              pip install -r requirements.txt pyinstaller
 
-      - name: Build single-file executable
-        run: pyinstaller timecode.spec
+         - name: Build single-file executable
+           run: pyinstaller timecode.spec
 
-      # Rename the output to include the platform name so all three files can
-      # coexist in the same GitHub Release without overwriting each other.
-      - name: Rename binary
-        shell: bash
-        run: mv dist/${{ matrix.dist_name }} dist/${{ matrix.artifact }}
+         # Rename the output to include the platform name so all three files can
+         # coexist in the same GitHub Release without overwriting each other.
+         - name: Rename binary
+           shell: bash
+           run: mv dist/${{ matrix.dist_name }} dist/${{ matrix.artifact }}
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: dist/${{ matrix.artifact }}
+         - name: Upload build artifact
+           uses: actions/upload-artifact@v4
+           with:
+              name: ${{ matrix.artifact }}
+              path: dist/${{ matrix.artifact }}
 
-  # ---------------------------------------------------------------------------
-  # Release job - runs after all builds succeed
-  # ---------------------------------------------------------------------------
-  release:
-    name: Publish Release
-    needs: build
-    runs-on: ubuntu-latest
-    # Only publish on branch pushes; skip manual workflow_dispatch runs.
-    if: github.event_name == 'push'
-    permissions:
-      contents: write
+   # ---------------------------------------------------------------------------
+   # Release job - runs after all builds succeed
+   # ---------------------------------------------------------------------------
+   release:
+      name: Publish Release
+      needs: build
+      runs-on: ubuntu-latest
+      # Only publish on branch pushes; skip manual workflow_dispatch runs.
+      if: github.event_name == 'push'
+      permissions:
+         contents: write
 
-    steps:
-      - name: Checkout code (full history + tags)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      steps:
+         - name: Checkout code (full history + tags)
+           uses: actions/checkout@v4
+           with:
+              fetch-depth: 0
 
-      # Compute the next CalVer version for this month.
-      - name: Compute CalVer version
-        id: version
-        shell: bash
-        run: |
-          git fetch --tags
-          YEAR_MONTH=$(date -u +'%Y.%m')
-          # grep exits 1 when there are no existing tags (first release).
-          # Capture separately with || true so the script does not abort.
-          EXISTING=$(git tag -l "${YEAR_MONTH}.*" \
-            | sed "s/^${YEAR_MONTH}\.//" \
-            | grep -E '^[0-9]+$' || true)
-          LAST_N=$(echo "$EXISTING" | sort -n | tail -1)
-          N=$(( ${LAST_N:-0} + 1 ))
-          VERSION="${YEAR_MONTH}.${N}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Computed version: ${VERSION}"
+         # Compute the next CalVer version for this month.
+         - name: Compute CalVer version
+           id: version
+           shell: bash
+           run: |
+              git fetch --tags
+              YEAR_MONTH=$(date -u +'%Y.%m')
+              # grep exits 1 when there are no existing tags (first release).
+              # Capture separately with || true so the script does not abort.
+              EXISTING=$(git tag -l "${YEAR_MONTH}.*" \
+                | sed "s/^${YEAR_MONTH}\.//" \
+                | grep -E '^[0-9]+$' || true)
+              LAST_N=$(echo "$EXISTING" | sort -n | tail -1)
+              N=$(( ${LAST_N:-0} + 1 ))
+              VERSION="${YEAR_MONTH}.${N}"
+              echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+              echo "Computed version: ${VERSION}"
 
-      # Reject the release if CHANGELOG_LATEST.md still has the placeholder text.
-      # This must run before the tag is created so no dangling tag is left behind.
-      - name: Validate CHANGELOG_LATEST.md
-        shell: bash
-        run: |
-          if grep -q "Replace this comment with your release notes" CHANGELOG_LATEST.md; then
-            echo "ERROR: CHANGELOG_LATEST.md still contains the placeholder text."
-            echo "Update it with real release notes before merging to release."
-            exit 1
-          fi
-          if ! grep -qE '[a-zA-Z0-9]' CHANGELOG_LATEST.md; then
-            echo "ERROR: CHANGELOG_LATEST.md appears to be empty."
-            exit 1
-          fi
-          echo "CHANGELOG_LATEST.md looks good."
+         # Reject the release if CHANGELOG_LATEST.md still has the placeholder text.
+         # This must run before the tag is created so no dangling tag is left behind.
+         - name: Validate CHANGELOG_LATEST.md
+           shell: bash
+           run: |
+              if grep -q "Replace this comment with your release notes" CHANGELOG_LATEST.md; then
+                echo "ERROR: CHANGELOG_LATEST.md still contains the placeholder text."
+                echo "Update it with real release notes before merging to release."
+                exit 1
+              fi
+              if ! grep -qE '[a-zA-Z0-9]' CHANGELOG_LATEST.md; then
+                echo "ERROR: CHANGELOG_LATEST.md appears to be empty."
+                exit 1
+              fi
+              echo "CHANGELOG_LATEST.md looks good."
 
-      # Tag the commit and push so the GitHub Release is tied to this exact SHA.
-      - name: Create and push version tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "${{ steps.version.outputs.version }}"
-          git push origin "${{ steps.version.outputs.version }}"
+         # Tag the commit and push so the GitHub Release is tied to this exact SHA.
+         - name: Create and push version tag
+           run: |
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git tag "${{ steps.version.outputs.version }}"
+              git push origin "${{ steps.version.outputs.version }}"
 
-      # Prepend the versioned entry to CHANGELOG.md automatically.
-      - name: Update CHANGELOG.md
-        shell: bash
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          DATE=$(date -u +'%Y-%m-%d')
-          MARKER="<!-- Releases are prepended here automatically by CI after each merge to release. -->"
-          MARKER_LINE=$(grep -n "$MARKER" CHANGELOG.md | head -1 | cut -d: -f1)
-          if [ -n "$MARKER_LINE" ]; then
-            head -n "$MARKER_LINE" CHANGELOG.md > CHANGELOG.tmp
-            echo "" >> CHANGELOG.tmp
-            echo "## ${VERSION} -- ${DATE}" >> CHANGELOG.tmp
-            cat CHANGELOG_LATEST.md >> CHANGELOG.tmp
-            echo "" >> CHANGELOG.tmp
-            echo "---" >> CHANGELOG.tmp
-            tail -n "+$((MARKER_LINE + 1))" CHANGELOG.md >> CHANGELOG.tmp
-            mv CHANGELOG.tmp CHANGELOG.md
-          fi
-          echo "CHANGELOG.md updated for ${VERSION}."
+         # Prepend the versioned entry to CHANGELOG.md automatically.
+         - name: Update CHANGELOG.md
+           shell: bash
+           run: |
+              VERSION="${{ steps.version.outputs.version }}"
+              DATE=$(date -u +'%Y-%m-%d')
+              MARKER="<!-- Releases are prepended here automatically by CI after each merge to release. -->"
+              MARKER_LINE=$(grep -n "$MARKER" CHANGELOG.md | head -1 | cut -d: -f1)
+              if [ -n "$MARKER_LINE" ]; then
+                head -n "$MARKER_LINE" CHANGELOG.md > CHANGELOG.tmp
+                echo "" >> CHANGELOG.tmp
+                echo "## ${VERSION} -- ${DATE}" >> CHANGELOG.tmp
+                cat CHANGELOG_LATEST.md >> CHANGELOG.tmp
+                echo "" >> CHANGELOG.tmp
+                echo "---" >> CHANGELOG.tmp
+                tail -n "+$((MARKER_LINE + 1))" CHANGELOG.md >> CHANGELOG.tmp
+                mv CHANGELOG.tmp CHANGELOG.md
+              fi
+              echo "CHANGELOG.md updated for ${VERSION}."
 
-      - name: Commit updated CHANGELOG.md
-        run: |
-          git add CHANGELOG.md
-          git diff --staged --quiet && echo "No changes to commit." || \
-            git commit -m "chore: update CHANGELOG.md for ${{ steps.version.outputs.version }} [skip ci]"
-          git push origin release
+         - name: Commit updated CHANGELOG.md
+           run: |
+              git add CHANGELOG.md
+              git diff --staged --quiet && echo "No changes to commit." || \
+                git commit -m "chore: update CHANGELOG.md for ${{ steps.version.outputs.version }} [skip ci]"
+              git push origin release
 
-      - name: Download all platform artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
+         - name: Download all platform artifacts
+           uses: actions/download-artifact@v4
+           with:
+              path: artifacts
+              merge-multiple: true
 
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: ${{ steps.version.outputs.version }}
-          body_path: CHANGELOG_LATEST.md
-          files: artifacts/*
+         - name: Publish GitHub Release
+           uses: softprops/action-gh-release@v2
+           with:
+              tag_name: ${{ steps.version.outputs.version }}
+              name: ${{ steps.version.outputs.version }}
+              body_path: CHANGELOG_LATEST.md
+              files: artifacts/*
