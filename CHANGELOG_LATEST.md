@@ -1,5 +1,5 @@
 ﻿## What''s Changed
 
-## Notes
+## fix
 
-No changes just checking updater works with download and replace!
+- updated the update script to use correct url for version download
