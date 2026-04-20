@@ -288,13 +288,16 @@ def _apply_update(new_exe_path: str) -> None:
         current_exe = str(downloads / pathlib.Path(new_exe_path).name)
 
     if sys.platform == "win32":
-        # Windows cannot replace a running executable — delegate to a batch script
+        # Windows cannot replace a running executable — delegate to a batch script.
+        # Unblock-File removes the Zone.Identifier ADS that Windows applies to
+        # downloaded files, which otherwise prevents PyInstaller from loading DLLs.
         bat_fd, bat_path = tempfile.mkstemp(suffix=".bat", prefix="TcgSwap_")
         with os.fdopen(bat_fd, "w") as bat:
             bat.write(
                 "@echo off\n"
                 "timeout /t 2 /nobreak > NUL\n"
                 f'move /y "{new_exe_path}" "{current_exe}"\n'
+                f'powershell -Command "Unblock-File -Path \\"{current_exe}\\""\n'
                 f'start "" "{current_exe}"\n'
                 'del "%~f0"\n'
             )
