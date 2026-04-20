@@ -289,14 +289,20 @@ def _apply_update(new_exe_path: str) -> None:
 
     if sys.platform == "win32":
         # Windows cannot replace a running executable — delegate to a PowerShell script.
+        # We pass the current PID so the script waits until this process fully exits
+        # before moving the file (a fixed sleep is unreliable).
         # Unblock-File removes the Zone.Identifier ADS that Windows applies to
         # downloaded files, which otherwise prevents PyInstaller from loading DLLs.
+        current_pid = os.getpid()
         ps_fd, ps_path = tempfile.mkstemp(suffix=".ps1", prefix="TcgSwap_")
         with os.fdopen(ps_fd, "w") as ps:
             ps.write(
-                "Start-Sleep -Seconds 2\n"
+                f"$parentPid = {current_pid}\n"
+                "while (Get-Process -Id $parentPid -ErrorAction SilentlyContinue) {\n"
+                "    Start-Sleep -Milliseconds 200\n"
+                "}\n"
                 f'Move-Item -Force -LiteralPath "{new_exe_path}" -Destination "{current_exe}"\n'
-                f'Unblock-File -LiteralPath "{current_exe}"\n'
+                f'try {{ Unblock-File -LiteralPath "{current_exe}" }} catch {{}}\n'
                 f'Start-Process -FilePath "{current_exe}"\n'
                 "Remove-Item -LiteralPath $PSCommandPath -Force\n"
             )
