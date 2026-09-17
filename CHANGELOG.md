@@ -76,7 +76,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 
 ## Fix
 
-- updated the update script to use correct url for version download. please work!
+- updated the update script to use correct URL for version download. please work!
 
 ---
 
@@ -85,7 +85,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 
 ## Fix
 
-- updated the update script to use correct url for version download. please work!
+- updated the update script to use correct URL for version download. please work!
 
 ---
 
@@ -94,7 +94,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 
 ## Fix
 
-- updated the update script to use correct url for version download.
+- updated the update script to use correct URL for version download.
 
 ---
 
@@ -103,7 +103,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 
 ## Fix
 
-- updated the update script to use correct url for version download.
+- updated the update script to use correct URL for version download.
 
 ---
 
@@ -112,7 +112,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 
 ## Fix
 
-- updated the update script to use correct url for version download
+- updated the update script to use correct URL for version download
 
 ---
 
@@ -121,7 +121,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 
 ## Fix
 
-- updated the update script to use correct url for version download
+- updated the update script to use correct URL for version download
 
 ---
 
@@ -130,7 +130,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 
 ## Fix
 
-- updated the update script to use correct url for version download
+- updated the update script to use correct URL for version download
 
 ---
 
