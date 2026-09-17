@@ -1,0 +1,238 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Styles.Resources>
+    <ResourceDictionary>
+
+      <!-- ── Palette ─────────────────────────────────────────────────────────
+           Broadcast/streaming-inspired: OLED black stage, a tally-light red for
+           LTC (matches the record-light convention streamers already know) and
+           a distinct sky blue for UTC, so the two toggles never read as "the
+           same green thing" at a glance. Sourced from the ui-ux-pro-max skill's
+           "Video Streaming/OTT" and "Music Streaming" palettes, adapted. ─────── -->
+      <Color x:Key="TcGreenColor">#4ADE80</Color>
+      <SolidColorBrush x:Key="TcGreenBrush" Color="{StaticResource TcGreenColor}" />
+
+      <!-- Recolor Fluent's accent (checkbox checkmarks, etc.) to match the app's green
+           instead of the stock purple, which clashed with the rest of the dark theme. -->
+      <Color x:Key="SystemAccentColor">#4ADE80</Color>
+      <Color x:Key="SystemAccentColorLight1">#6EE79B</Color>
+      <Color x:Key="SystemAccentColorLight2">#92EFB3</Color>
+      <Color x:Key="SystemAccentColorLight3">#B6F7CC</Color>
+      <Color x:Key="SystemAccentColorDark1">#3BB868</Color>
+      <Color x:Key="SystemAccentColorDark2">#2C8F4F</Color>
+      <Color x:Key="SystemAccentColorDark3">#1D6636</Color>
+      <SolidColorBrush x:Key="RecRedBrush" Color="#FB3B57" />
+      <SolidColorBrush x:Key="RecRedHoverBrush" Color="#FB7185" />
+      <SolidColorBrush x:Key="UtcBlueBrush" Color="#38BDF8" />
+      <SolidColorBrush x:Key="UtcBlueHoverBrush" Color="#7DD3FC" />
+      <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#000000" />
+      <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#0C0C0F" />
+      <SolidColorBrush x:Key="ControlBackgroundBrush" Color="#17171C" />
+      <SolidColorBrush x:Key="ControlBorderBrush" Color="#28283a" />
+      <SolidColorBrush x:Key="ControlHoverBrush" Color="#20202a" />
+      <SolidColorBrush x:Key="DividerBrush" Color="#1e1e24" />
+      <SolidColorBrush x:Key="PrimaryTextBrush" Color="#e4e4e7" />
+      <SolidColorBrush x:Key="SecondaryTextBrush" Color="#aaaaaa" />
+      <SolidColorBrush x:Key="MutedTextBrush" Color="#8a8a94" />
+      <SolidColorBrush x:Key="FaintTextBrush" Color="#8a8a96" />
+      <SolidColorBrush x:Key="StatusTextBrush" Color="#8a8a90" />
+      <SolidColorBrush x:Key="WarningTextBrush" Color="#d4af37" />
+      <SolidColorBrush x:Key="IconBrush" Color="#b2b2b2" />
+      <SolidColorBrush x:Key="IconHoverBrush" Color="#e0e0e0" />
+      <SolidColorBrush x:Key="IconDisabledBrush" Color="#454545" />
+      <SolidColorBrush x:Key="IconButtonHoverBackgroundBrush" Color="#1a1a20" />
+      <SolidColorBrush x:Key="IconButtonPressedBackgroundBrush" Color="#22222a" />
+      <SolidColorBrush x:Key="PlayButtonBackgroundBrush" Color="#1a1a20" />
+      <SolidColorBrush x:Key="PlayButtonHoverBrush" Color="#22222c" />
+      <SolidColorBrush x:Key="PlayButtonPressedBrush" Color="#2a2a36" />
+      <SolidColorBrush x:Key="KofiBrush" Color="#FF5E5B" />
+      <SolidColorBrush x:Key="KofiHoverBrush" Color="#ff7674" />
+      <SolidColorBrush x:Key="KofiPressedBrush" Color="#e54b48" />
+
+      <FontFamily x:Key="MonoFontFamily">avares://Techibbie.TimecodeGenerator/Assets/Fonts#JetBrains Mono,Consolas,DejaVu Sans Mono,Menlo,monospace</FontFamily>
+
+      <!-- ── Flat toolbar icon-button ────────────────────────────────────── -->
+      <ControlTheme x:Key="IconButton" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Width" Value="44" />
+        <Setter Property="Height" Value="44" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{StaticResource IconBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="RenderTransform" Value="scale(1.0)" />
+        <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+        <Setter Property="Transitions">
+          <Transitions>
+            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut" />
+          </Transitions>
+        </Setter>
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Background="{TemplateBinding Background}"
+                    CornerRadius="{TemplateBinding CornerRadius}">
+              <Border.Transitions>
+                <Transitions>
+                  <BrushTransition Property="Background" Duration="0:0:0.15" />
+                </Transitions>
+              </Border.Transitions>
+              <ContentPresenter Content="{TemplateBinding Content}"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border">
+          <Setter Property="Background" Value="{StaticResource IconButtonHoverBackgroundBrush}" />
+        </Style>
+        <Style Selector="^:pressed">
+          <Setter Property="RenderTransform" Value="scale(0.88)" />
+        </Style>
+        <Style Selector="^:pressed /template/ Border">
+          <Setter Property="Background" Value="{StaticResource IconButtonPressedBackgroundBrush}" />
+        </Style>
+        <Style Selector="^:disabled">
+          <Setter Property="Foreground" Value="{StaticResource IconDisabledBrush}" />
+        </Style>
+      </ControlTheme>
+
+      <!-- ── Centre play/pause button ─────────────────────────────────────── -->
+      <ControlTheme x:Key="PlayButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+        <Setter Property="Background" Value="{StaticResource PlayButtonBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="26" />
+        <Setter Property="Width" Value="56" />
+        <Setter Property="Height" Value="56" />
+        <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{TemplateBinding CornerRadius}">
+              <Border.Transitions>
+                <Transitions>
+                  <BrushTransition Property="Background" Duration="0:0:0.15" />
+                </Transitions>
+              </Border.Transitions>
+              <ContentPresenter Content="{TemplateBinding Content}"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border">
+          <Setter Property="Background" Value="{StaticResource PlayButtonHoverBrush}" />
+        </Style>
+        <Style Selector="^:pressed /template/ Border">
+          <Setter Property="Background" Value="{StaticResource PlayButtonPressedBrush}" />
+        </Style>
+      </ControlTheme>
+
+      <!-- ── Dialog surface buttons ───────────────────────────────────────── -->
+      <ControlTheme x:Key="DialogButton" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource ControlBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="18,7" />
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="MinWidth" Value="80" />
+        <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="RenderTransform" Value="scale(1.0)" />
+        <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+        <Setter Property="Transitions">
+          <Transitions>
+            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut" />
+          </Transitions>
+        </Setter>
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{TemplateBinding CornerRadius}">
+              <Border.Transitions>
+                <Transitions>
+                  <BrushTransition Property="Background" Duration="0:0:0.15" />
+                </Transitions>
+              </Border.Transitions>
+              <ContentPresenter Content="{TemplateBinding Content}"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 Margin="{TemplateBinding Padding}" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border">
+          <Setter Property="Background" Value="{StaticResource ControlHoverBrush}" />
+        </Style>
+        <Style Selector="^:pressed">
+          <Setter Property="RenderTransform" Value="scale(0.96)" />
+        </Style>
+      </ControlTheme>
+
+      <ControlTheme x:Key="KofiButton" TargetType="Button" BasedOn="{StaticResource DialogButton}">
+        <Setter Property="Background" Value="{StaticResource KofiBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Style Selector="^:pointerover /template/ Border">
+          <Setter Property="Background" Value="{StaticResource KofiHoverBrush}" />
+        </Style>
+        <Style Selector="^:pressed /template/ Border">
+          <Setter Property="Background" Value="{StaticResource KofiPressedBrush}" />
+        </Style>
+      </ControlTheme>
+
+    </ResourceDictionary>
+  </Styles.Resources>
+
+  <!-- ── Base styles applied globally ──────────────────────────────────── -->
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{StaticResource WindowBackgroundBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+  </Style>
+
+  <Style Selector="ComboBox">
+    <Setter Property="Background" Value="{StaticResource ControlBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="Padding" Value="10,5" />
+    <Setter Property="MinHeight" Value="30" />
+  </Style>
+
+  <Style Selector="TextBox">
+    <Setter Property="Background" Value="{StaticResource ControlBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+    <Setter Property="CaretBrush" Value="{StaticResource PrimaryTextBrush}" />
+    <Setter Property="SelectionBrush" Value="{StaticResource TcGreenBrush}" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="Padding" Value="10,5" />
+    <Setter Property="MinHeight" Value="30" />
+  </Style>
+
+  <Style Selector="NumericUpDown">
+    <Setter Property="Background" Value="{StaticResource ControlBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="MinHeight" Value="30" />
+  </Style>
+
+  <Style Selector="CheckBox">
+    <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+  </Style>
+
+</Styles>

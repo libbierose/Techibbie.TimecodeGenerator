@@ -1,0 +1,10 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Techibbie.TimecodeGenerator.App.Views.UpdateCheckPanel">
+
+  <StackPanel Spacing="12">
+    <TextBlock x:Name="VersionLabel" HorizontalAlignment="Center" FontSize="12"
+               Foreground="{StaticResource FaintTextBrush}" />
+    <StackPanel x:Name="StatusArea" Spacing="8" HorizontalAlignment="Stretch" />
+  </StackPanel>
+</UserControl>

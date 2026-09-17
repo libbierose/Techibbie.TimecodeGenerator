@@ -1,4 +1,4 @@
-﻿name: Build & Release
+name: Build & Release
 
 # Triggers:
 #   1. Any push/merge to the `release` branch  -> auto-compute CalVer tag, build
@@ -16,6 +16,7 @@ on:
 
 env:
    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
    # ---------------------------------------------------------------------------
    # Version job - computes CalVer before building so binaries embed it
@@ -48,7 +49,9 @@ jobs:
               echo "Computed version: ${VERSION}"
 
    # ---------------------------------------------------------------------------
-   # Build job - runs in parallel on all three platforms
+   # Build job - runs in parallel on all three platforms, each publishing a
+   # single self-contained executable (the .NET equivalent of the PyInstaller
+   # --onefile build).
    # ---------------------------------------------------------------------------
    build:
       name: Build (${{ matrix.os }})
@@ -61,12 +64,15 @@ jobs:
          matrix:
             include:
                - os: windows-latest
+                 rid: win-x64
                  dist_name: Techibbie.TimecodeGenerator.exe
                  artifact: Techibbie.TimecodeGenerator-Windows.exe
                - os: ubuntu-latest
+                 rid: linux-x64
                  dist_name: Techibbie.TimecodeGenerator
                  artifact: Techibbie.TimecodeGenerator-Linux
                - os: macos-latest
+                 rid: osx-x64
                  dist_name: Techibbie.TimecodeGenerator
                  artifact: Techibbie.TimecodeGenerator-macOS
 
@@ -74,46 +80,47 @@ jobs:
          - name: Checkout code
            uses: actions/checkout@v4
 
-         - name: Set up Python 3.12
-           uses: actions/setup-python@v5
+         - name: Set up .NET 8 SDK
+           uses: actions/setup-dotnet@v4
            with:
-              python-version: "3.12"
-              cache: pip
-
-         # PortAudio is bundled inside the sounddevice wheel on Windows and macOS.
-         # On Linux it must be installed from the system package manager so that
-         # PyInstaller can find and bundle the shared library.
-         - name: Install PortAudio (Linux only)
-           if: runner.os == 'Linux'
-           run: sudo apt-get update && sudo apt-get install -y libportaudio2 portaudio19-dev
-
-         - name: Install Python dependencies
-           run: |
-              python -m pip install --upgrade pip
-              pip install -r requirements.txt pyinstaller
+              dotnet-version: "8.0.x"
 
          - name: Inject version into source
            env:
               APP_VER: ${{ needs.version.outputs.version }}
            shell: bash
            run: |
-              python -c "import re,pathlib,os; v=os.environ['APP_VER']; f=pathlib.Path('src/gui/main_window.py'); f.write_text(re.sub(r'APP_VERSION = \"dev\"', 'APP_VERSION = \"'+v+'\"', f.read_text(), count=1))"
-              echo "APP_VERSION set to ${APP_VER}"
+              sed -i.bak "s/AppVersion = \"dev\"/AppVersion = \"${APP_VER}\"/" src/Techibbie.TimecodeGenerator.App/AppInfo.cs
+              rm -f src/Techibbie.TimecodeGenerator.App/AppInfo.cs.bak
+              echo "AppVersion set to ${APP_VER}"
 
-         - name: Build single-file executable
-           run: pyinstaller timecode.spec
+         - name: Restore
+           run: dotnet restore
+
+         - name: Run tests
+           run: dotnet test tests/Techibbie.TimecodeGenerator.Core.Tests --configuration Release
+
+         - name: Publish self-contained single-file executable
+           run: >
+              dotnet publish src/Techibbie.TimecodeGenerator.App
+              --configuration Release
+              --runtime ${{ matrix.rid }}
+              --self-contained true
+              -p:PublishSingleFile=true
+              -p:IncludeNativeLibrariesForSelfExtract=true
+              -o publish/${{ matrix.rid }}
 
          # Rename the output to include the platform name so all three files can
          # coexist in the same GitHub Release without overwriting each other.
          - name: Rename binary
            shell: bash
-           run: mv dist/${{ matrix.dist_name }} dist/${{ matrix.artifact }}
+           run: mv "publish/${{ matrix.rid }}/${{ matrix.dist_name }}" "publish/${{ matrix.rid }}/${{ matrix.artifact }}"
 
          - name: Upload build artifact
            uses: actions/upload-artifact@v4
            with:
               name: ${{ matrix.artifact }}
-              path: dist/${{ matrix.artifact }}
+              path: publish/${{ matrix.rid }}/${{ matrix.artifact }}
 
    # ---------------------------------------------------------------------------
    # Release job - runs after all builds succeed
