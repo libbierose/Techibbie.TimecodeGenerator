@@ -134,7 +134,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 
 ---
 
-## 2026.04.9 -- 2026-04-20
+## 2026.04.09 -- 2026-04-20
 ﻿## What''s Changed
 
 ## Notes
@@ -143,7 +143,7 @@ No changes just checking updater works with download and replace!
 
 ---
 
-## 2026.04.8 -- 2026-04-20
+## 2026.04.08 -- 2026-04-20
 ﻿## What''s Changed
 
 ## Notes
@@ -152,7 +152,7 @@ No changes just checking updater works with download and replace!
 
 ---
 
-## 2026.04.7 -- 2026-04-20
+## 2026.04.07 -- 2026-04-20
 ﻿## What''s Changed
 
 ## Notes
@@ -161,7 +161,7 @@ No changes just checking updater works
 
 ---
 
-## 2026.04.6 -- 2026-04-20
+## 2026.04.06 -- 2026-04-20
 ﻿## What''s Changed
 
 ## Notes
@@ -170,7 +170,7 @@ No changes just checking updater works
 
 ---
 
-## 2026.04.5 -- 2026-04-20
+## 2026.04.05 -- 2026-04-20
 ﻿## What''s Changed
 
 ## Update
@@ -179,7 +179,7 @@ No changes just checking updater works
 
 ---
 
-## 2026.04.4 -- 2026-04-20
+## 2026.04.04 -- 2026-04-20
 ﻿## What''s Changed
 
 ## Fix
@@ -192,7 +192,7 @@ No changes just checking updater works
 
 ---
 
-## 2026.04.3 -- 2026-04-20
+## 2026.04.03 -- 2026-04-20
 ﻿## What''s Changed
 
 ## Fix
@@ -205,7 +205,7 @@ No changes just checking updater works
 
 ---
 
-## 2026.04.2 -- 2026-04-20
+## 2026.04.02 -- 2026-04-20
 ﻿## What''s Changed
 
 ### Added
@@ -223,7 +223,7 @@ No changes just checking updater works
 
 ---
 
-## 2026.04.1 -- 2026-04-20
+## 2026.04.01 -- 2026-04-20
 ﻿## What''s Changed
 
 ### Added
