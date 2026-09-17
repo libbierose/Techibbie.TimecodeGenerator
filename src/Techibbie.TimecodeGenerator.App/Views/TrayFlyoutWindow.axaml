@@ -1,0 +1,45 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Techibbie.TimecodeGenerator.App.Views.TrayFlyoutWindow"
+        Width="400" SizeToContent="Height"
+        CanResize="False"
+        SystemDecorations="None"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowStartupLocation="Manual"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent">
+
+  <Border CornerRadius="12" Margin="8" BoxShadow="0 8 28 0 #AA000000">
+    <ExperimentalAcrylicBorder CornerRadius="12">
+      <ExperimentalAcrylicBorder.Material>
+        <ExperimentalAcrylicMaterial BackgroundSource="Digger"
+                                      TintColor="#0C0C0F" TintOpacity="0.88"
+                                      MaterialOpacity="0.8" FallbackColor="#0C0C0F" />
+      </ExperimentalAcrylicBorder.Material>
+      <Border BorderBrush="{StaticResource ControlBorderBrush}" BorderThickness="1" CornerRadius="12">
+        <StackPanel Margin="18,16,18,16" Spacing="12">
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock x:Name="HeaderTitle" Grid.Column="0" Text="Techibbie Timecode Generator"
+                       FontSize="13" FontWeight="Medium" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+            <Button x:Name="HeaderActionButton" Grid.Column="1" Theme="{StaticResource IconButton}"
+                    Width="30" Height="30" />
+          </Grid>
+
+          <Border Height="1" Background="{StaticResource DividerBrush}" />
+
+          <!-- The Fluent scrollbar overlays content instead of reflowing it, so reserve a
+               gutter on the right (via the ContentControl's margin) that's always there,
+               whether or not the scrollbar is actually showing — otherwise it sits on top
+               of text at the trailing edge. -->
+          <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="460">
+            <ContentControl x:Name="ViewHost" Margin="0,0,14,0" />
+          </ScrollViewer>
+
+        </StackPanel>
+      </Border>
+    </ExperimentalAcrylicBorder>
+  </Border>
+</Window>
