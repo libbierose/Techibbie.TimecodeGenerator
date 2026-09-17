@@ -1,9 +1,5 @@
-﻿## What''s Changed
+﻿## What's Changed
 
-## Fix
+## change
 
-- Fixed Use real-time so time actually starts at the real time instead of 00:00:00:00
-
-## Added
-
-- Check for update
+last attemp and then I'm leaving it, if you get dll error you just need to reopen the app and it should be updated.

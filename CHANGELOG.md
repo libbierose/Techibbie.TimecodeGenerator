@@ -8,6 +8,203 @@ Versions use CalVer: `YYYY.MM.N` (year, zero-padded month, release counter).
 
 <!-- Releases are prepended here automatically by CI after each merge to release. -->
 
+## 2026.04.24 -- 2026-04-20
+﻿## What's Changed
+
+## change
+
+last attemp and then I'm leaving it, if you get dll error you just need to reopen the app and it should be updated.
+
+---
+
+## 2026.04.23 -- 2026-04-20
+﻿## What's Changed
+
+## change
+
+just up versioning
+
+---
+
+## 2026.04.22 -- 2026-04-20
+﻿## What's Changed
+
+## change
+
+just up versioning
+
+---
+
+## 2026.04.21 -- 2026-04-20
+﻿## What's Changed
+
+## change
+
+I think we might actually be gettingsomewhere with the updater... sorry for the updates
+
+---
+
+## 2026.04.20 -- 2026-04-20
+﻿## What's Changed
+
+## change
+
+I think we might actually be gettingsomewhere with the updater... sorry for the updates
+
+---
+
+## 2026.04.19 -- 2026-04-20
+﻿## What's Changed
+
+## change
+
+user has to go to get hub and download updates, auro updater will be coming soon!
+
+---
+
+## 2026.04.18 -- 2026-04-20
+﻿## What's Changed
+
+## change
+
+user has to go to get hub and download updates, auro updater will be coming soon!
+
+---
+
+## 2026.04.17 -- 2026-04-20
+﻿## What's Changed
+
+## fix
+
+- updated the update script to use correct url for version download. please work!
+
+---
+
+## 2026.04.16 -- 2026-04-20
+﻿## What's Changed
+
+## fix
+
+- updated the update script to use correct url for version download. please work!
+
+---
+
+## 2026.04.15 -- 2026-04-20
+﻿## What's Changed
+
+## fix
+
+- updated the update script to use correct url for version download.
+
+---
+
+## 2026.04.14 -- 2026-04-20
+﻿## What's Changed
+
+## fix
+
+- updated the update script to use correct url for version download.
+
+---
+
+## 2026.04.12 -- 2026-04-20
+﻿## What's Changed
+
+## fix
+
+- updated the update script to use correct url for version download
+
+---
+
+## 2026.04.11 -- 2026-04-20
+﻿## What's Changed
+
+## fix
+
+- updated the update script to use correct url for version download
+
+---
+
+## 2026.04.10 -- 2026-04-20
+﻿## What''s Changed
+
+## fix
+
+- updated the update script to use correct url for version download
+
+---
+
+## 2026.04.9 -- 2026-04-20
+﻿## What''s Changed
+
+## Notes
+
+No changes just checking updater works with download and replace!
+
+---
+
+## 2026.04.8 -- 2026-04-20
+﻿## What''s Changed
+
+## Notes
+
+No changes just checking updater works with download and replace!
+
+---
+
+## 2026.04.7 -- 2026-04-20
+﻿## What''s Changed
+
+## Notes
+
+No changes just checking updater works
+
+---
+
+## 2026.04.6 -- 2026-04-20
+﻿## What''s Changed
+
+## Notes
+
+No changes just checking updater works
+
+---
+
+## 2026.04.5 -- 2026-04-20
+﻿## What''s Changed
+
+## Update
+
+- Change updater to download the latest version instead of redirecting to github releases
+
+---
+
+## 2026.04.4 -- 2026-04-20
+﻿## What''s Changed
+
+## Fix
+
+- Fixed Use real-time so time actually starts at the real time instead of 00:00:00:00
+
+## Added
+
+- Check for update
+
+---
+
+## 2026.04.3 -- 2026-04-20
+﻿## What''s Changed
+
+## Fix
+
+- Fixed Use real-time so time actually starts at the real time instead of 00:00:00:00
+
+## Added
+
+- Check for update
+
+---
+
 ## 2026.04.2 -- 2026-04-20
 ﻿## What''s Changed
 
