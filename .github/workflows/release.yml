@@ -197,10 +197,21 @@ jobs:
               path: artifacts
               merge-multiple: true
 
+         # Uses the preinstalled GitHub CLI instead of softprops/action-gh-release,
+         # which can hang indefinitely after an "Error saving asset" failure.
+         # Idempotent: reuses an existing release for the tag and overwrites assets.
          - name: Publish GitHub Release
-           uses: softprops/action-gh-release@v2
-           with:
-              tag_name: ${{ needs.version.outputs.version }}
-              name: ${{ needs.version.outputs.version }}
-              body_path: CHANGELOG_LATEST.md
-              files: artifacts/*
+           timeout-minutes: 10
+           env:
+              GH_TOKEN: ${{ github.token }}
+              VERSION: ${{ needs.version.outputs.version }}
+           shell: bash
+           run: |
+              ls -la artifacts
+              if ! gh release view "$VERSION" >/dev/null 2>&1; then
+                gh release create "$VERSION" \
+                  --title "$VERSION" \
+                  --notes-file CHANGELOG_LATEST.md \
+                  --verify-tag
+              fi
+              gh release upload "$VERSION" artifacts/* --clobber
