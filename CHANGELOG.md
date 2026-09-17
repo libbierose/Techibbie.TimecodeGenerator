@@ -11,7 +11,7 @@ Versions use CalVer: `YYYY.MM.N` (year, zero-padded month, release counter).
 ## 2026.04.24 -- 2026-04-20
 ﻿## What's Changed
 
-## change
+## Change
 
 Final updater attempt: if the app shows a DLL load error immediately after updating, close it and reopen it once so the replaced files are loaded.
 
@@ -20,7 +20,7 @@ Final updater attempt: if the app shows a DLL load error immediately after updat
 ## 2026.04.23 -- 2026-04-20
 ﻿## What's Changed
 
-## change
+## Change
 
 just up versioning
 
@@ -29,7 +29,7 @@ just up versioning
 ## 2026.04.22 -- 2026-04-20
 ﻿## What's Changed
 
-## change
+## Change
 
 just up versioning
 
@@ -38,7 +38,7 @@ just up versioning
 ## 2026.04.21 -- 2026-04-20
 ﻿## What's Changed
 
-## change
+## Change
 
 I think we might actually be getting somewhere with the updater... sorry for the updates
 
@@ -47,7 +47,7 @@ I think we might actually be getting somewhere with the updater... sorry for the
 ## 2026.04.20 -- 2026-04-20
 ﻿## What's Changed
 
-## change
+## Change
 
 I think we might actually be getting somewhere with the updater... sorry for the updates
 
@@ -56,7 +56,7 @@ I think we might actually be getting somewhere with the updater... sorry for the
 ## 2026.04.19 -- 2026-04-20
 ﻿## What's Changed
 
-## change
+## Change
 
 Users have to go to GitHub and download updates; auto updater will be coming soon!
 
@@ -65,7 +65,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 ## 2026.04.18 -- 2026-04-20
 ﻿## What's Changed
 
-## change
+## Change
 
 Users have to go to GitHub and download updates; auto updater will be coming soon!
 
@@ -74,7 +74,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 ## 2026.04.17 -- 2026-04-20
 ﻿## What's Changed
 
-## fix
+## Fix
 
 - updated the update script to use correct url for version download. please work!
 
@@ -83,7 +83,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 ## 2026.04.16 -- 2026-04-20
 ﻿## What's Changed
 
-## fix
+## Fix
 
 - updated the update script to use correct url for version download. please work!
 
@@ -92,7 +92,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 ## 2026.04.15 -- 2026-04-20
 ﻿## What's Changed
 
-## fix
+## Fix
 
 - updated the update script to use correct url for version download.
 
@@ -101,7 +101,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 ## 2026.04.14 -- 2026-04-20
 ﻿## What's Changed
 
-## fix
+## Fix
 
 - updated the update script to use correct url for version download.
 
@@ -110,7 +110,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 ## 2026.04.12 -- 2026-04-20
 ﻿## What's Changed
 
-## fix
+## Fix
 
 - updated the update script to use correct url for version download
 
@@ -119,7 +119,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 ## 2026.04.11 -- 2026-04-20
 ﻿## What's Changed
 
-## fix
+## Fix
 
 - updated the update script to use correct url for version download
 
@@ -128,7 +128,7 @@ Users have to go to GitHub and download updates; auto updater will be coming soo
 ## 2026.04.10 -- 2026-04-20
 ﻿## What''s Changed
 
-## fix
+## Fix
 
 - updated the update script to use correct url for version download
 
