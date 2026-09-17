@@ -2,4 +2,4 @@
 
 ## change
 
-last attemp and then I'm leaving it, if you get dll error you just need to reopen the app and it should be updated.
+Final updater attempt: if the app shows a DLL load error immediately after updating, close it and reopen it once so the replaced files are loaded.

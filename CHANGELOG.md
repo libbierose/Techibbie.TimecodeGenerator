@@ -13,7 +13,7 @@ Versions use CalVer: `YYYY.MM.N` (year, zero-padded month, release counter).
 
 ## change
 
-last attemp and then I'm leaving it, if you get dll error you just need to reopen the app and it should be updated.
+Final updater attempt: if the app shows a DLL load error immediately after updating, close it and reopen it once so the replaced files are loaded.
 
 ---
 
@@ -40,7 +40,7 @@ just up versioning
 
 ## change
 
-I think we might actually be gettingsomewhere with the updater... sorry for the updates
+I think we might actually be getting somewhere with the updater... sorry for the updates
 
 ---
 
@@ -49,7 +49,7 @@ I think we might actually be gettingsomewhere with the updater... sorry for the 
 
 ## change
 
-I think we might actually be gettingsomewhere with the updater... sorry for the updates
+I think we might actually be getting somewhere with the updater... sorry for the updates
 
 ---
 
@@ -58,7 +58,7 @@ I think we might actually be gettingsomewhere with the updater... sorry for the 
 
 ## change
 
-user has to go to get hub and download updates, auro updater will be coming soon!
+Users have to go to GitHub and download updates; auto updater will be coming soon!
 
 ---
 
@@ -67,7 +67,7 @@ user has to go to get hub and download updates, auro updater will be coming soon
 
 ## change
 
-user has to go to get hub and download updates, auro updater will be coming soon!
+Users have to go to GitHub and download updates; auto updater will be coming soon!
 
 ---
 
