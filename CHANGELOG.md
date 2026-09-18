@@ -29,16 +29,16 @@ last attemp and then I'm leaving it, if you get dll error you just need to reope
 ## 2026.04.24 -- 2026-04-20
 ﻿## What's Changed
 
-## change
+## Change
 
-last attemp and then I'm leaving it, if you get dll error you just need to reopen the app and it should be updated.
+Final updater attempt: if the app shows a DLL load error immediately after updating, close it and reopen it once so the replaced files are loaded.
 
 ---
 
 ## 2026.04.23 -- 2026-04-20
 ﻿## What's Changed
 
-## change
+## Change
 
 just up versioning
 
@@ -47,7 +47,7 @@ just up versioning
 ## 2026.04.22 -- 2026-04-20
 ﻿## What's Changed
 
-## change
+## Change
 
 just up versioning
 
@@ -56,103 +56,103 @@ just up versioning
 ## 2026.04.21 -- 2026-04-20
 ﻿## What's Changed
 
-## change
+## Change
 
-I think we might actually be gettingsomewhere with the updater... sorry for the updates
+I think we might actually be getting somewhere with the updater... sorry for the updates
 
 ---
 
 ## 2026.04.20 -- 2026-04-20
 ﻿## What's Changed
 
-## change
+## Change
 
-I think we might actually be gettingsomewhere with the updater... sorry for the updates
+I think we might actually be getting somewhere with the updater... sorry for the updates
 
 ---
 
 ## 2026.04.19 -- 2026-04-20
 ﻿## What's Changed
 
-## change
+## Change
 
-user has to go to get hub and download updates, auro updater will be coming soon!
+Users have to go to GitHub and download updates; auto updater will be coming soon!
 
 ---
 
 ## 2026.04.18 -- 2026-04-20
 ﻿## What's Changed
 
-## change
+## Change
 
-user has to go to get hub and download updates, auro updater will be coming soon!
+Users have to go to GitHub and download updates; auto updater will be coming soon!
 
 ---
 
 ## 2026.04.17 -- 2026-04-20
 ﻿## What's Changed
 
-## fix
+## Fix
 
-- updated the update script to use correct url for version download. please work!
+- updated the update script to use correct URL for version download. please work!
 
 ---
 
 ## 2026.04.16 -- 2026-04-20
 ﻿## What's Changed
 
-## fix
+## Fix
 
-- updated the update script to use correct url for version download. please work!
+- updated the update script to use correct URL for version download. please work!
 
 ---
 
 ## 2026.04.15 -- 2026-04-20
 ﻿## What's Changed
 
-## fix
+## Fix
 
-- updated the update script to use correct url for version download.
+- updated the update script to use correct URL for version download.
 
 ---
 
 ## 2026.04.14 -- 2026-04-20
 ﻿## What's Changed
 
-## fix
+## Fix
 
-- updated the update script to use correct url for version download.
+- updated the update script to use correct URL for version download.
 
 ---
 
 ## 2026.04.12 -- 2026-04-20
 ﻿## What's Changed
 
-## fix
+## Fix
 
-- updated the update script to use correct url for version download
+- updated the update script to use correct URL for version download
 
 ---
 
 ## 2026.04.11 -- 2026-04-20
 ﻿## What's Changed
 
-## fix
+## Fix
 
-- updated the update script to use correct url for version download
+- updated the update script to use correct URL for version download
 
 ---
 
 ## 2026.04.10 -- 2026-04-20
 ﻿## What''s Changed
 
-## fix
+## Fix
 
-- updated the update script to use correct url for version download
+- updated the update script to use correct URL for version download
 
 ---
 
-## 2026.04.9 -- 2026-04-20
+## 2026.04.09 -- 2026-04-20
 ﻿## What''s Changed
 
 ## Notes
@@ -161,7 +161,7 @@ No changes just checking updater works with download and replace!
 
 ---
 
-## 2026.04.8 -- 2026-04-20
+## 2026.04.08 -- 2026-04-20
 ﻿## What''s Changed
 
 ## Notes
@@ -170,7 +170,7 @@ No changes just checking updater works with download and replace!
 
 ---
 
-## 2026.04.7 -- 2026-04-20
+## 2026.04.07 -- 2026-04-20
 ﻿## What''s Changed
 
 ## Notes
@@ -179,7 +179,7 @@ No changes just checking updater works
 
 ---
 
-## 2026.04.6 -- 2026-04-20
+## 2026.04.06 -- 2026-04-20
 ﻿## What''s Changed
 
 ## Notes
@@ -188,7 +188,7 @@ No changes just checking updater works
 
 ---
 
-## 2026.04.5 -- 2026-04-20
+## 2026.04.05 -- 2026-04-20
 ﻿## What''s Changed
 
 ## Update
@@ -197,7 +197,7 @@ No changes just checking updater works
 
 ---
 
-## 2026.04.4 -- 2026-04-20
+## 2026.04.04 -- 2026-04-20
 ﻿## What''s Changed
 
 ## Fix
@@ -210,7 +210,7 @@ No changes just checking updater works
 
 ---
 
-## 2026.04.3 -- 2026-04-20
+## 2026.04.03 -- 2026-04-20
 ﻿## What''s Changed
 
 ## Fix
@@ -223,7 +223,7 @@ No changes just checking updater works
 
 ---
 
-## 2026.04.2 -- 2026-04-20
+## 2026.04.02 -- 2026-04-20
 ﻿## What''s Changed
 
 ### Added
@@ -241,7 +241,7 @@ No changes just checking updater works
 
 ---
 
-## 2026.04.1 -- 2026-04-20
+## 2026.04.01 -- 2026-04-20
 ﻿## What''s Changed
 
 ### Added
