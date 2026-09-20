@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
@@ -15,14 +17,16 @@ namespace Techibbie.TimecodeGenerator.Audio;
 /// pure, directly-testable <see cref="MtcFrameState"/>; this class is just the MIDI I/O
 /// plumbing around it.
 ///
-/// Timing is a plain <see cref="Timer"/> firing 4x the frame rate (one quarter-frame message
-/// per tick); this is standard practice for MTC generators, but it is timer-resolution-bound,
-/// not sample-accurate like the LTC audio path — fine for DAW sync, not broadcast-grade.
+/// Timing: quarter-frame messages are scheduled against absolute Stopwatch deadlines (not a
+/// fixed integer-millisecond timer period, which would run ~4% fast at 30 fps), and any that
+/// are overdue are sent immediately, so the long-run rate is exact even if a sleep overshoots.
+/// It's still OS-scheduler-bound rather than sample-accurate like the LTC audio path.
 /// </summary>
 public sealed class MtcGenerator : IDisposable
 {
     private OutputDevice? _device;
-    private Timer? _timer;
+    private Thread? _thread;
+    private CancellationTokenSource? _cts;
     private readonly object _lock = new();
 
     private MtcFrameState? _state;
@@ -44,20 +48,71 @@ public sealed class MtcGenerator : IDisposable
     {
         Stop();
 
-        _device = OutputDevice.GetByName(deviceName);
-        _state = new MtcFrameState(hour, minute, second, frame, fps, dropFrame);
-        _pieceIndex = 0;
+        var device = OutputDevice.GetByName(deviceName);
+        var state = new MtcFrameState(hour, minute, second, frame, fps, dropFrame);
+        lock (_lock)
+        {
+            _device = device;
+            _state = state;
+            _pieceIndex = 0;
+        }
 
-        var quarterFrameMs = 1000.0 / (fps * 4.0);
-        _timer = new Timer(_ => SendNextPiece(), null, 0, Math.Max(1, (int)Math.Round(quarterFrameMs)));
+        var cts = new CancellationTokenSource();
+        var quarterFrameTicks = Stopwatch.Frequency / (state.ExactFps * 4.0);
+        _cts = cts;
+        _thread = new Thread(() => Run(cts.Token, quarterFrameTicks))
+        {
+            IsBackground = true,
+            Name = "MTC quarter-frame sender",
+            Priority = ThreadPriority.AboveNormal,
+        };
+        _thread.Start();
+    }
+
+    private void Run(CancellationToken token, double quarterFrameTicks)
+    {
+        // Windows' default ~15.6 ms timer granularity is far coarser than the ~8 ms quarter-frame spacing.
+        var raisedResolution = OperatingSystem.IsWindows() && NativeMethods.timeBeginPeriod(1) == 0;
+        try
+        {
+            var clock = Stopwatch.StartNew();
+            long sent = 0;
+            while (!token.IsCancellationRequested)
+            {
+                var due = (long)(sent * quarterFrameTicks);
+                var remaining = due - clock.ElapsedTicks;
+                if (remaining <= 0)
+                {
+                    SendNextPiece();
+                    sent++;
+                }
+                else if (remaining * 1000.0 / Stopwatch.Frequency > 2.0)
+                {
+                    Thread.Sleep(1);
+                }
+                else
+                {
+                    Thread.SpinWait(40);
+                }
+            }
+        }
+        finally
+        {
+            if (raisedResolution) NativeMethods.timeEndPeriod(1);
+        }
     }
 
     public void Stop()
     {
+        var thread = _thread;
+        _cts?.Cancel();
+        if (thread is not null && thread != Thread.CurrentThread) thread.Join(500);
+        _thread = null;
+        _cts?.Dispose();
+        _cts = null;
+
         lock (_lock)
         {
-            _timer?.Dispose();
-            _timer = null;
             _device?.Dispose();
             _device = null;
             _state = null;
@@ -92,4 +147,13 @@ public sealed class MtcGenerator : IDisposable
     }
 
     public void Dispose() => Stop();
+
+    private static class NativeMethods
+    {
+        [DllImport("winmm.dll")]
+        public static extern uint timeBeginPeriod(uint milliseconds);
+
+        [DllImport("winmm.dll")]
+        public static extern uint timeEndPeriod(uint milliseconds);
+    }
 }

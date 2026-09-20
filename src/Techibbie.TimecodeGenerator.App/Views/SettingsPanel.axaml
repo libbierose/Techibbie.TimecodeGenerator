@@ -12,6 +12,8 @@
       <ComboBox x:Name="DeviceCombo" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" />
     </Grid>
 
+    <TextBlock x:Name="FpsHint" TextWrapping="Wrap" FontSize="11"
+               Foreground="{StaticResource FaintTextBrush}" />
     <TextBlock x:Name="SampleRateHint" TextWrapping="Wrap" FontSize="11"
                Foreground="{StaticResource WarningTextBrush}" />
 

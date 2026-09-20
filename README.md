@@ -2,7 +2,7 @@
 
 # Techibbie Timecode Generator
 
-A cross-platform desktop application that generates **SMPTE Linear Timecode (LTC)** and displays a real-time timecode clock. Designed for film/video production workflows where a reliable, professional-grade timecode source is needed — including direct integration with **DaVinci Resolve** and other NLEs via audio output.
+A cross-platform desktop application that generates **SMPTE Linear Timecode (LTC)** and displays a real-time timecode clock. Designed for film/video production workflows where a reliable, professional-grade timecode source is needed — with LTC that DaVinci Resolve and other NLEs can read back from a recorded audio track.
 
 Built with **C# / .NET 8** and **Avalonia UI**.
 
@@ -11,8 +11,8 @@ Built with **C# / .NET 8** and **Avalonia UI**.
 ## Features
 
 - **Real-time timecode display** — dark, modern HH:MM:SS:FF readout that scales with the window
-- **SMPTE LTC audio output** — bit-accurate Biphase Mark Code (BMC) stream sent to any audio device; immediately lockable by DaVinci Resolve, Tentacle Sync, and hardware LTC readers
-- **Multiple frame rates** — 24, 25, 29.97 (DF), 30, 48, 50, 59.94 (DF), 60, 120 fps with correct drop-frame handling
+- **SMPTE LTC audio output** — bit-accurate Biphase Mark Code (BMC) stream sent to any audio device, verified in the test suite against an independent from-the-spec decoder
+- **Multiple frame rates** — 24, 25, 29.97 (DF), 30, 48, 50, 59.94 (DF), 60, 120 fps. SMPTE LTC only exists at 24/25/30, so 48/50/60/120 fps (and 59.94 DF) are transmitted at the standard half/quarter rate (24/25/30/29.97 DF) — the convention LTC readers expect. Drop-frame numbering is exact.
 - **Gapless callback stream** — a PortAudio low-latency callback guarantees zero-gap LTC with no buffer underruns
 - **Device native sample rate** — generates LTC at the device's native rate to avoid resampling that would corrupt bit timing
 - **Click-tone fallback** — optional audible click track when LTC mode is off, useful for manual sync
@@ -96,11 +96,15 @@ The test project verifies NDF/drop-frame timecode math, SMPTE 12M bit encoding (
 | **Save WAV** (⭳)         | Export LTC to a WAV file                        |
 | **Settings** (⚙)         | Change FPS, audio device, UTC mode, and more    |
 
-### Connecting to DaVinci Resolve
+### Using the LTC with DaVinci Resolve
 
-1. Connect your computer's audio output to a camera or audio recorder's timecode input (or use a virtual cable on the same machine).
-2. In Resolve: **Preferences → System → Capture and Playback → Timecode Source → LTC**.
-3. Press **Play** in this app and enable the **LTC** button — Resolve will lock within a few frames.
+The workflow Resolve documents for audio LTC is reading it back from a **recorded audio track** (*Update Timecode from Audio – LTC*; see e.g. [RØDE's Resolve timecode guide](https://edge.rode.com/pdf/page/2218/modules/9192/Wireless%20PRO_Timecode%20Guide_Davinci%20Resolve%2018-5.pdf)):
+
+1. Feed this app's LTC output into a camera or recorder's audio input (or record it from a loopback/virtual cable), so the LTC is captured on its own audio channel alongside your footage.
+2. Import those clips into Resolve, select them in the Media Pool, right-click → **Update Timecode from Audio – LTC**.
+3. Set your project frame rate to match the footage.
+
+Tips: keep the LTC on its own dedicated channel, and record it at a moderate level — Resolve's LTC reader is sensitive to signals that are too quiet or too hot (this app outputs at about −6 dBFS). Use a standard LTC rate (24/25/29.97 DF/30). This app hasn't been verified against a live Resolve install; if you're expecting Resolve to *chase* LTC live from a sound card rather than read it from a recorded track, note that we found no documentation of that being supported.
 
 ---
 

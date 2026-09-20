@@ -363,6 +363,17 @@ public sealed class TimecodeEngine
         Core.Wav.WavWriter.WriteMono16(path, audio, 48000);
     }
 
+    /// <summary>What LTC/MTC is really transmitted at for the current frame rate, e.g. "30 fps LTC" or "29.97 fps LTC (drop-frame)".</summary>
+    public string LtcRateText
+    {
+        get
+        {
+            var rate = LtcRate.FromFrameRate(_timecodeHandler.Fps, _timecodeHandler.IsDropFrame());
+            var fps = rate.DropFrame ? "29.97" : rate.ExactFps.ToString("0.###");
+            return $"{fps} fps LTC{(rate.DropFrame ? " (drop-frame)" : "")}";
+        }
+    }
+
     public string FormatFps() => _timecodeHandler.Fps == Math.Floor(_timecodeHandler.Fps)
         ? ((long)_timecodeHandler.Fps).ToString()
         : _timecodeHandler.Fps.ToString("0.##");

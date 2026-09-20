@@ -251,7 +251,7 @@ public partial class TrayFlyoutWindow : Window
             try
             {
                 _engine.ExportWav(file.Path.LocalPath, (double)(durationBox.Value ?? 60));
-                statusText.Text = $"Saved: {file.Name}\n{durationBox.Value:0}s · {_engine.FormatFps()} fps · 48 kHz · starts at 01:00:00:00";
+                statusText.Text = $"Saved: {file.Name}\n{durationBox.Value:0}s · {_engine.LtcRateText} · 48 kHz · starts at 01:00:00:00";
             }
             catch (Exception ex)
             {

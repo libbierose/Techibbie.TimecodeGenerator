@@ -95,13 +95,10 @@ public sealed class AudioEngine : IDisposable
         var channels = device.maxOutputChannels;
         var nativeSampleRate = device.defaultSampleRate;
 
-        var state = new LtcStreamState(new LtcGenerator((int)Math.Round(nativeSampleRate)), fps, dropFrame)
-        {
-            Frame = frames,
-            Second = seconds,
-            Minute = minutes,
-            Hour = hours,
-        };
+        // The shared encoder handles drop-frame numbering, half-rate LTC for high frame
+        // rates, and drift-free frame lengths — the same code WAV export uses.
+        var state = new LtcStreamState(new LtcSampleSource(new LtcStreamEncoder(
+            (int)Math.Round(nativeSampleRate), fps, dropFrame, hours, minutes, seconds, frames)));
         _ltcState = state;
 
         var outputParams = new StreamParameters
@@ -129,29 +126,17 @@ public sealed class AudioEngine : IDisposable
 
     private static unsafe void LtcCallback(float* output, int frameCount, int channels, LtcStreamState state)
     {
-        var outPos = 0;
-        while (outPos < frameCount)
-        {
-            if (state.BufferPos >= state.Buffer.Length)
-            {
-                state.Buffer = state.Generator.GenerateLtcAudio(state.Hour, state.Minute, state.Second, state.Frame, state.Fps, state.DropFrame);
-                state.BufferPos = 0;
-                state.Advance();
-            }
+        if (state.Scratch.Length < frameCount) state.Scratch = new float[frameCount];
+        var mono = state.Scratch.AsSpan(0, frameCount);
+        state.Source.Fill(mono);
 
-            var take = Math.Min(frameCount - outPos, state.Buffer.Length - state.BufferPos);
-            for (var i = 0; i < take; i++)
+        for (var i = 0; i < frameCount; i++)
+        {
+            // LTC goes out on every channel so any physical output the user has patched receives it.
+            for (var ch = 0; ch < channels; ch++)
             {
-                var sample = state.Buffer[state.BufferPos + i];
-                var frameIndex = outPos + i;
-                // LTC goes out on every channel so any physical output the user has patched receives it.
-                for (var ch = 0; ch < channels; ch++)
-                {
-                    output[frameIndex * channels + ch] = sample;
-                }
+                output[i * channels + ch] = mono[i];
             }
-            state.BufferPos += take;
-            outPos += take;
         }
     }
 
@@ -298,38 +283,9 @@ public sealed class AudioEngine : IDisposable
         Shutdown();
     }
 
-    private sealed class LtcStreamState(LtcGenerator generator, double fps, bool dropFrame)
+    private sealed class LtcStreamState(LtcSampleSource source)
     {
-        public LtcGenerator Generator { get; } = generator;
-        public double Fps { get; } = fps;
-        public bool DropFrame { get; } = dropFrame;
-
-        public int Frame;
-        public int Second;
-        public int Minute;
-        public int Hour;
-        public float[] Buffer = Array.Empty<float>();
-        public int BufferPos;
-
-        public void Advance()
-        {
-            Frame++;
-            if (Frame >= (int)Math.Round(Fps))
-            {
-                Frame = 0;
-                Second++;
-                if (Second >= 60)
-                {
-                    Second = 0;
-                    Minute++;
-                    if (Minute >= 60)
-                    {
-                        Minute = 0;
-                        Hour++;
-                        if (Hour >= 24) Hour = 0;
-                    }
-                }
-            }
-        }
+        public LtcSampleSource Source { get; } = source;
+        public float[] Scratch = Array.Empty<float>();
     }
 }

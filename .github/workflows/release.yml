@@ -108,6 +108,7 @@ jobs:
               --self-contained true
               -p:PublishSingleFile=true
               -p:IncludeNativeLibrariesForSelfExtract=true
+              -p:EnableCompressionInSingleFile=true
               -o publish/${{ matrix.rid }}
 
          # Rename the output to include the platform name so all three files can
@@ -161,14 +162,24 @@ jobs:
            run: |
               git config user.name "github-actions[bot]"
               git config user.email "github-actions[bot]@users.noreply.github.com"
-              git tag "${{ needs.version.outputs.version }}"
-              git push origin "${{ needs.version.outputs.version }}"
+              VERSION="${{ needs.version.outputs.version }}"
+              # Safe to re-run: if a previous attempt already pushed the tag, reuse it.
+              if git ls-remote --exit-code --tags origin "refs/tags/${VERSION}" >/dev/null 2>&1; then
+                echo "Tag ${VERSION} already exists on origin - reusing it."
+              else
+                git tag "${VERSION}"
+                git push origin "${VERSION}"
+              fi
 
          # Prepend the versioned entry to CHANGELOG.md automatically.
          - name: Update CHANGELOG.md
            shell: bash
            run: |
               VERSION="${{ needs.version.outputs.version }}"
+              if grep -q "^## ${VERSION} -- " CHANGELOG.md; then
+                echo "CHANGELOG.md already has an entry for ${VERSION} - skipping."
+                exit 0
+              fi
               DATE=$(date -u +'%Y-%m-%d')
               MARKER="<!-- Releases are prepended here automatically by CI after each merge to release. -->"
               MARKER_LINE=$(grep -n "$MARKER" CHANGELOG.md | head -1 | cut -d: -f1)
@@ -197,21 +208,51 @@ jobs:
               path: artifacts
               merge-multiple: true
 
-         # Uses the preinstalled GitHub CLI instead of softprops/action-gh-release,
-         # which can hang indefinitely after an "Error saving asset" failure.
-         # Idempotent: reuses an existing release for the tag and overwrites assets.
+         # GitHub's upload endpoint is unreliable when several ~40-90 MB assets are sent at
+         # once: softprops/action-gh-release died with "Error saving asset", and a plain
+         # `gh release upload artifacts/*` (which uploads in parallel) stalled until its
+         # timeout - leaving a published release with zero assets. So: one file at a time,
+         # a per-file timeout, retries, and a final check that every asset really landed.
+         # Idempotent: reuses an existing release for the tag and overwrites its assets.
          - name: Publish GitHub Release
-           timeout-minutes: 10
+           timeout-minutes: 30
            env:
               GH_TOKEN: ${{ github.token }}
               VERSION: ${{ needs.version.outputs.version }}
            shell: bash
            run: |
+              set -euo pipefail
               ls -la artifacts
+
               if ! gh release view "$VERSION" >/dev/null 2>&1; then
-                gh release create "$VERSION" \
-                  --title "$VERSION" \
-                  --notes-file CHANGELOG_LATEST.md \
-                  --verify-tag
+                gh release create "$VERSION"                   --title "$VERSION"                   --notes-file CHANGELOG_LATEST.md                   --verify-tag
               fi
-              gh release upload "$VERSION" artifacts/* --clobber
+
+              for file in artifacts/*; do
+                name=$(basename "$file")
+                uploaded=0
+                for attempt in 1 2 3 4; do
+                  echo "::group::Uploading $name (attempt $attempt/4)"
+                  if timeout 240 gh release upload "$VERSION" "$file" --clobber; then
+                    uploaded=1
+                    echo "::endgroup::"
+                    break
+                  fi
+                  echo "::endgroup::"
+                  echo "::warning::Upload of $name failed or timed out (attempt $attempt/4)"
+                  sleep $((attempt * 15))
+                done
+                if [ "$uploaded" -ne 1 ]; then
+                  echo "::error::Giving up on $name after 4 attempts"
+                  exit 1
+                fi
+              done
+
+              echo "Assets on release $VERSION:"
+              gh release view "$VERSION" --json assets --jq '.assets[] | "  \(.name)  \(.size) bytes"'
+              for expected in Techibbie.TimecodeGenerator-Windows.exe Techibbie.TimecodeGenerator-Linux Techibbie.TimecodeGenerator-macOS; do
+                if ! gh release view "$VERSION" --json assets --jq '.assets[].name' | grep -qx "$expected"; then
+                  echo "::error::Release $VERSION is missing $expected"
+                  exit 1
+                fi
+              done

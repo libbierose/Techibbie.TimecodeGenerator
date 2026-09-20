@@ -45,9 +45,9 @@ public class MtcFrameStateTests
     [InlineData(25.0, false, MidiTimeCodeType.TwentyFive)]
     [InlineData(29.97, true, MidiTimeCodeType.ThirtyDrop)]
     [InlineData(30.0, false, MidiTimeCodeType.Thirty)]
-    // MTC has no official flag for these — falls back to the nearest 30fps flag.
-    [InlineData(48.0, false, MidiTimeCodeType.Thirty)]
-    [InlineData(50.0, false, MidiTimeCodeType.Thirty)]
+    // MTC has no flag for these rates; they're sent at half rate, like LTC.
+    [InlineData(48.0, false, MidiTimeCodeType.TwentyFour)]
+    [InlineData(50.0, false, MidiTimeCodeType.TwentyFive)]
     [InlineData(59.94, true, MidiTimeCodeType.ThirtyDrop)]
     [InlineData(60.0, false, MidiTimeCodeType.Thirty)]
     [InlineData(120.0, false, MidiTimeCodeType.Thirty)]
@@ -103,5 +103,41 @@ public class MtcFrameStateTests
         state.Advance(2);
 
         Assert.Equal((0, 0, 0, 1), (state.Hour, state.Minute, state.Second, state.Frame));
+    }
+
+    [Fact]
+    public void Advance_DropFrame_SkipsFramesZeroAndOneAtANormalMinute()
+    {
+        var state = new MtcFrameState(0, 0, 59, 28, fps: 29.97, dropFrame: true);
+        state.Advance(2); // 28 -> 29 -> next minute, where :00 and :01 don't exist
+
+        Assert.Equal((0, 1, 0, 2), (state.Hour, state.Minute, state.Second, state.Frame));
+    }
+
+    [Fact]
+    public void Advance_DropFrame_DoesNotSkipAtEveryTenthMinute()
+    {
+        var state = new MtcFrameState(0, 9, 59, 28, fps: 29.97, dropFrame: true);
+        state.Advance(2);
+
+        Assert.Equal((0, 10, 0, 0), (state.Hour, state.Minute, state.Second, state.Frame));
+    }
+
+    [Fact]
+    public void HighFrameRate_IsSentAtHalfRateWithTheStartFrameScaledDown()
+    {
+        // 60 fps app rate -> 30 fps MTC; app frame 45 is MTC frame 22.
+        var state = new MtcFrameState(0, 0, 0, 45, fps: 60.0, dropFrame: false);
+
+        Assert.Equal(30.0, state.ExactFps);
+        Assert.Equal(22, state.Frame);
+    }
+
+    [Fact]
+    public void DropFrameFamily_UsesTheExact30000Over1001Rate()
+    {
+        var state = new MtcFrameState(0, 0, 0, 0, fps: 29.97, dropFrame: true);
+
+        Assert.Equal(30000.0 / 1001.0, state.ExactFps, precision: 9);
     }
 }

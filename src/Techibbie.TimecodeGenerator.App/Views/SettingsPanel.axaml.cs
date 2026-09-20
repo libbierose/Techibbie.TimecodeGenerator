@@ -37,6 +37,8 @@ public partial class SettingsPanel : UserControl
             FpsCombo.Items.Add(new FpsItem(fps));
         }
         FpsCombo.SelectedIndex = Math.Max(0, supportedFps.ToList().FindIndex(f => f == currentTimecode.Fps));
+        FpsCombo.SelectionChanged += (_, _) => RefreshFpsHint();
+        RefreshFpsHint();
 
         foreach (var dev in devices)
         {
@@ -87,6 +89,20 @@ public partial class SettingsPanel : UserControl
             Completed?.Invoke(BuildResult());
         };
         CancelButton.Click += (_, _) => Completed?.Invoke(null);
+    }
+
+    private void RefreshFpsHint()
+    {
+        if (FpsCombo.SelectedItem is not FpsItem item)
+        {
+            FpsHint.Text = "";
+            return;
+        }
+
+        var rate = Techibbie.TimecodeGenerator.Core.Ltc.LtcRate.FromFrameRate(item.Fps, item.Fps is 29.97 or 59.94);
+        FpsHint.Text = rate.Divisor > 1
+            ? $"LTC has no {item.Fps:0.##} fps format, so it's sent at the standard {rate.ExactFps:0.###} fps (half/quarter rate) — the way DaVinci Resolve and other readers expect."
+            : "";
     }
 
     private void RefreshSampleRateHint()

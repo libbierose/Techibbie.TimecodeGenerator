@@ -75,10 +75,13 @@ public sealed class LtcGenerator
     /// has an additional transition at the midpoint, a '0' bit does not. The
     /// frame occupies exactly 1/fps seconds regardless of sample rate.
     /// </summary>
-    public float[] BitsToAudio(byte[] bits, double fps)
+    public float[] BitsToAudio(byte[] bits, double fps) =>
+        BitsToAudio(bits, (int)Math.Round(SampleRate / fps));
+
+    /// <summary>Same as above, but with the frame length in samples chosen by the caller (see <see cref="LtcStreamEncoder"/>).</summary>
+    public float[] BitsToAudio(byte[] bits, int totalSamples)
     {
-        var samplesPerFrame = SampleRate / fps;
-        var totalSamples = (int)Math.Round(samplesPerFrame);
+        var samplesPerFrame = (double)totalSamples;
         var audio = new float[totalSamples];
 
         float level = 1.0f;
@@ -104,9 +107,16 @@ public sealed class LtcGenerator
             }
         }
 
-        for (var n = 0; n < audio.Length; n++) audio[n] *= 0.9f;
+        for (var n = 0; n < audio.Length; n++) audio[n] *= Amplitude;
         return audio;
     }
+
+    /// <summary>
+    /// Peak level, about -6 dBFS. LTC readers (Resolve's "Update Timecode from Audio" included)
+    /// are documented to struggle with signals that are either too quiet or too hot, and a
+    /// full-scale square wave is very hot once it passes through a DAC, mixer or camera input.
+    /// </summary>
+    public const float Amplitude = 0.5f;
 
     /// <summary>Generate one LTC frame of audio for the given timecode.</summary>
     public float[] GenerateLtcAudio(int hours, int minutes, int seconds, int frames, double fps, bool dropFrame = false)
@@ -122,36 +132,13 @@ public sealed class LtcGenerator
     public float[] GenerateContinuousLtc(int hours, int minutes, int seconds, int frames, double fps,
         bool dropFrame = false, double durationSeconds = 1.0)
     {
-        var framesPerSecond = (int)Math.Round(fps);
-        var framesToGenerate = (int)(durationSeconds * fps);
-
-        var currentFrame = frames;
-        var currentSecond = seconds;
-        var currentMinute = minutes;
-        var currentHour = hours;
+        var encoder = new LtcStreamEncoder(SampleRate, fps, dropFrame, hours, minutes, seconds, frames);
+        var framesToGenerate = (int)(durationSeconds * encoder.Rate.ExactFps);
 
         var chunks = new List<float[]>(framesToGenerate);
         for (var i = 0; i < framesToGenerate; i++)
         {
-            chunks.Add(GenerateLtcAudio(currentHour, currentMinute, currentSecond, currentFrame, fps, dropFrame));
-
-            currentFrame++;
-            if (currentFrame >= framesPerSecond)
-            {
-                currentFrame = 0;
-                currentSecond++;
-                if (currentSecond >= 60)
-                {
-                    currentSecond = 0;
-                    currentMinute++;
-                    if (currentMinute >= 60)
-                    {
-                        currentMinute = 0;
-                        currentHour++;
-                        if (currentHour >= 24) currentHour = 0;
-                    }
-                }
-            }
+            chunks.Add(encoder.NextFrame());
         }
 
         if (chunks.Count == 0) return Array.Empty<float>();
