@@ -40,9 +40,10 @@ This application generates a fully spec-compliant LTC stream including:
 
 ## Requirements
 
-- **.NET 8 SDK** (to build/run from source). Pre-built releases are fully self-contained and need nothing installed
+- **.NET 8 SDK** (to build/run from source). Pre-built releases are fully self-contained and need no .NET install
 - A system audio output device (built-in speakers or dedicated audio interface)
-- Windows 10/11, macOS 12+, or Linux (X11/Wayland with ALSA/PulseAudio)
+- Windows 10/11 for the pre-built release. macOS 12+ and Linux (X11/Wayland with ALSA/PulseAudio) can run from source
+- On Linux, the audio library needs JACK and ALSA runtime libraries. On Debian/Ubuntu: `sudo apt install libjack-jackd2-0 libasound2t64`
 
 ### Key dependencies
 
@@ -56,13 +57,11 @@ This application generates a fully spec-compliant LTC stream including:
 
 ## Download (pre-built binaries)
 
-Pre-built single-file, self-contained executables for Windows, Linux, and macOS are attached to every [GitHub Release](../../releases/latest). No .NET runtime install is required.
+A pre-built, self-contained Windows executable is attached to every [GitHub Release](../../releases/latest). No .NET runtime install is required. Linux and macOS builds aren't published for now, but you can build them from source (see below).
 
-| Platform | File                                                                                                                      |
-| -------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Windows  | `Techibbie.TimecodeGenerator-Windows.exe`: double-click to run                                                            |
-| Linux    | `Techibbie.TimecodeGenerator-Linux`: `chmod +x Techibbie.TimecodeGenerator-Linux && ./Techibbie.TimecodeGenerator-Linux`  |
-| macOS    | `Techibbie.TimecodeGenerator-macOS`: right-click → Open (required the first time due to Gatekeeper)                      |
+| Platform | File |
+| -------- | ---- |
+| Windows  | `Techibbie.TimecodeGenerator-Windows.exe`: double-click to run |
 
 ---
 
@@ -152,7 +151,7 @@ tests/
   Techibbie.TimecodeGenerator.App.Tests/
 .github/workflows/
   ci.yml                                # Build + test on push/PR
-  release.yml                           # 3-platform self-contained publish & GitHub Release
+  release.yml                           # Windows self-contained publish & GitHub Release
 ```
 
 ---
@@ -170,7 +169,7 @@ dev  ─────────────────────────
 | Branch    | Purpose                    | CI                                                                        |
 | --------- | --------------------------- | --------------------------------------------------------------------------|
 | `dev`     | Day-to-day development      | Build + full test suite on every push                                     |
-| `release` | Stable, ready-to-ship code   | Full 3-platform build + auto-versioned GitHub Release on every push/merge |
+| `release` | Stable, ready-to-ship code   | Windows build + auto-versioned GitHub Release on every push/merge |
 
 ### Day-to-day workflow
 
@@ -183,7 +182,7 @@ git push                    # triggers CI checks
 # Ship to release
 git checkout release
 git merge dev
-git push                    # triggers 3-platform build + publishes a new versioned release
+git push                    # triggers the Windows build + publishes a new versioned release
 ```
 
 ### Versioning

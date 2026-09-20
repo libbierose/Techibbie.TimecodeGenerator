@@ -2,7 +2,7 @@ name: Build & Release
 
 # Triggers:
 #   1. Any push/merge to the `release` branch  -> auto-compute CalVer tag, build
-#      all three platforms, and publish a GitHub Release.
+#      the Windows release, and publish a GitHub Release.
 #   2. Manual trigger from the Actions tab      -> build only (no release/tag created).
 #
 # Version format: YYYY.MM.N
@@ -49,7 +49,7 @@ jobs:
               echo "Computed version: ${VERSION}"
 
    # ---------------------------------------------------------------------------
-   # Build job - runs in parallel on all three platforms, each publishing a
+   # Build job - builds the Windows x64 release as a
    # single self-contained executable (the .NET equivalent of the PyInstaller
    # --onefile build).
    # ---------------------------------------------------------------------------
@@ -67,14 +67,6 @@ jobs:
                  rid: win-x64
                  dist_name: Techibbie.TimecodeGenerator.exe
                  artifact: Techibbie.TimecodeGenerator-Windows.exe
-               - os: ubuntu-latest
-                 rid: linux-x64
-                 dist_name: Techibbie.TimecodeGenerator
-                 artifact: Techibbie.TimecodeGenerator-Linux
-               - os: macos-latest
-                 rid: osx-x64
-                 dist_name: Techibbie.TimecodeGenerator
-                 artifact: Techibbie.TimecodeGenerator-macOS
 
       steps:
          - name: Checkout code
@@ -97,17 +89,8 @@ jobs:
          - name: Restore
            run: dotnet restore
 
-         # Full suite (Core, Audio, App) on Windows and Linux, the same platforms ci.yml
-         # covers. macOS only runs Core: the Audio/App tests load PortAudio's native library
-         # and haven't been verified on a macOS runner, so they shouldn't block a release.
          - name: Run tests
-           shell: bash
-           run: |
-              if [ "${{ runner.os }}" = "macOS" ]; then
-                dotnet test tests/Techibbie.TimecodeGenerator.Core.Tests --configuration Release
-              else
-                dotnet test --configuration Release
-              fi
+           run: dotnet test --configuration Release
 
          - name: Publish self-contained single-file executable
            run: >
@@ -120,8 +103,7 @@ jobs:
               -p:EnableCompressionInSingleFile=true
               -o publish/${{ matrix.rid }}
 
-         # Rename the output to include the platform name so all three files can
-         # coexist in the same GitHub Release without overwriting each other.
+         # Rename the output to include the platform name in the release asset.
          - name: Rename binary
            shell: bash
            run: mv "publish/${{ matrix.rid }}/${{ matrix.dist_name }}" "publish/${{ matrix.rid }}/${{ matrix.artifact }}"
@@ -259,7 +241,7 @@ jobs:
 
               echo "Assets on release $VERSION:"
               gh release view "$VERSION" --json assets --jq '.assets[] | "  \(.name)  \(.size) bytes"'
-              for expected in Techibbie.TimecodeGenerator-Windows.exe Techibbie.TimecodeGenerator-Linux Techibbie.TimecodeGenerator-macOS; do
+              for expected in Techibbie.TimecodeGenerator-Windows.exe; do
                 if ! gh release view "$VERSION" --json assets --jq '.assets[].name' | grep -qx "$expected"; then
                   echo "::error::Release $VERSION is missing $expected"
                   exit 1
