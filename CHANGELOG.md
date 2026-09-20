@@ -8,6 +8,15 @@ Versions use CalVer: `YYYY.MM.N` (year, zero-padded month, release counter).
 
 <!-- Releases are prepended here automatically by CI after each merge to release. -->
 
+## 2026.09.3 -- 2026-09-20
+﻿## What's Changed
+
+## change
+
+last attemp and then I'm leaving it, if you get dll error you just need to reopen the app and it should be updated.
+
+---
+
 ## 2026.09.2 -- 2026-09-17
 ﻿## What's Changed
 
