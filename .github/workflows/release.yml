@@ -97,8 +97,17 @@ jobs:
          - name: Restore
            run: dotnet restore
 
+         # Full suite (Core, Audio, App) on Windows and Linux, the same platforms ci.yml
+         # covers. macOS only runs Core: the Audio/App tests load PortAudio's native library
+         # and haven't been verified on a macOS runner, so they shouldn't block a release.
          - name: Run tests
-           run: dotnet test tests/Techibbie.TimecodeGenerator.Core.Tests --configuration Release
+           shell: bash
+           run: |
+              if [ "${{ runner.os }}" = "macOS" ]; then
+                dotnet test tests/Techibbie.TimecodeGenerator.Core.Tests --configuration Release
+              else
+                dotnet test --configuration Release
+              fi
 
          - name: Publish self-contained single-file executable
            run: >
